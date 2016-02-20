@@ -16,7 +16,7 @@ int stringv_init(
     stringv->buf = buf;
     stringv->size = size;
     stringv->blocksize = blocksize;
-    stringv_count = 0;
+    stringv->count = 0;
 
     /* Fill buffer with zero */
     memset(stringv->buf, 0, size);
