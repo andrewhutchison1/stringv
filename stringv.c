@@ -4,7 +4,8 @@
 #include <string.h>
 
 static unsigned blocks_required_by(
-        struct stringv *stringv, unsigned string_length);
+        struct stringv const *stringv,
+        unsigned string_length);
 
 static char *addressof_nth_block(struct stringv *stringv, unsigned n);
 static char *addressof_nth_string(struct stringv *stringv, unsigned n);
@@ -80,7 +81,7 @@ int stringv_copy(
 }
 
 static unsigned blocks_required_by(
-        struct stringv *stringv,
+        struct stringv const *stringv,
         unsigned string_length)
 {
     assert(stringv && (string_length > 0));
@@ -108,6 +109,15 @@ static char *addressof_nth_string(struct stringv *stringv, unsigned n)
     /* The first string always starts at the start of the stringv's buffer */
     if (n == 0) {
         return stringv->buf;
+    }
+
+    /* We can perform an optimisation here if the stringv's string count is
+     * equal to the number of used blocks (ie. there is a bijection
+     * between string addresses and block addresses). Since an arbitrary
+     * block address can be determined in constant time, we can defer to
+     * addressof_nth_block instead with the same result. */
+    if (stringv->string_count == stringv->block_used) {
+        return addressof_nth_block(stringv, n);
     }
 
     /* Otherwise, we need to iterate through the buffer in steps of
