@@ -21,13 +21,11 @@ int stringv_init(
         struct stringv *stringv,    /* stringv object to initialise */
         char *buf,                  /* The buffer to use, must be writeable */
         unsigned buf_size,          /* The size of the buffer, in chars */
-        unsigned block_size,        /* The desired block size */
-        enum stringv_error *error);
+        unsigned block_size);       /* The desired block size */
 
-/* Copies a stringv to another stringv. Returns 1 on success and 0 on failure.
- * You can use this to copy the contents of a full stringv to another stringv
- * with a larger buffer. If the function fails, no work is done */
-int stringv_copy(
+/* Copies the data stored in the source stringv to the destination stringv.
+ * Preserves the block size of the destination stringv. Returns dest */
+struct stringv *stringv_copy(
         struct stringv *dest,       /* stringv to copy to */
         struct stringv *source,     /* stringv to copy from */
         enum stringv_error *error);
