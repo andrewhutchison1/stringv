@@ -29,10 +29,10 @@ struct stringv *stringv_copy(
         struct stringv *source,     /* stringv to copy from */
         enum stringv_error *error);
 
-/* Pushes a string to the end of the stringv. Returns 1 on success, 0 on
- * failure. The index of the newly created string element can be recovered
- * through stringv->string_count - 1. */
-int stringv_push_back(
+/* Appends a string to the stringv, returning a pointer to its location,
+ * or NULL on error. The index of the appended string can be recovered
+ * through stringv->string_count - 1 */
+char *stringv_push_back(
         struct stringv *stringv,
         char const *string,
         unsigned string_length,

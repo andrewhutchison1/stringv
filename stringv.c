@@ -84,7 +84,7 @@ struct stringv *stringv_copy(
     return dest;
 }
 
-int stringv_push_back(
+char *stringv_push_back(
         struct stringv *stringv,
         char const *string,
         unsigned string_length,
@@ -102,6 +102,7 @@ static unsigned blocks_required_by(
         unsigned string_length)
 {
     assert(stringv && (string_length > 0));
+    assert(stringv->block_size > 0);
 
     /* For the NUL char */
     ++string_length;
