@@ -2,7 +2,6 @@
 #define STRINGV_H_
 
 enum stringv_error {
-    stringv_success,
     stringv_invalid_argument,
     stringv_block_size_mismatch,
     stringv_insufficient_blocks
@@ -16,8 +15,8 @@ struct stringv {
     unsigned string_count;
 };
 
-/* Initialises a stringv, returns 0 on failure */
-int stringv_init(
+/* Initialises a stringv, returns a pointer to stringv, or NULL on error */
+struct stringv *stringv_init(
         struct stringv *stringv,    /* stringv object to initialise */
         char *buf,                  /* The buffer to use, must be writeable */
         unsigned buf_size,          /* The size of the buffer, in chars */

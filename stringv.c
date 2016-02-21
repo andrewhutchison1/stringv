@@ -10,7 +10,7 @@ static unsigned blocks_required_by(
 static char *addressof_nth_block(struct stringv *stringv, unsigned n);
 static char *addressof_nth_string(struct stringv *stringv, unsigned n);
 
-int stringv_init(
+struct stringv *stringv_init(
         struct stringv *stringv,
         char *buf,
         unsigned buf_size,
@@ -21,7 +21,7 @@ int stringv_init(
             buf_size <= 1 ||
             block_size <= 1 ||
             block_size > buf_size) {
-        return 0;
+        return NULL;
     }
 
     stringv->buf = buf;
@@ -30,32 +30,36 @@ int stringv_init(
     stringv->block_used = stringv->string_count = 0;
     memset(stringv->buf, 0, buf_size);
 
-    return 1;
+    return stringv;
 }
 
-int stringv_copy(
+struct stringv *stringv_copy(
         struct stringv *dest,
-        struct stringv *source)
+        struct stringv *source,
+        enum stringv_error *error)
 {
     unsigned i, block, ith_string_length;
     char *ith_string = NULL;
 
     if (!dest || !source) {
-        return 0;
+        error && (*error = stringv_invalid_argument);
+        return NULL;
     }
 
     /* If the destination stringv's block size is smaller than the source's
      * block size, then there may be strings in the source stringv that
      * cannot be represented in the destination stringv. */
     if (dest->block_size < source->block_size) {
-        return 0;
+        error && (*error = stringv_block_size_mismatch);
+        return NULL;
     }
 
     /* Moreover, if the number of used blocks in the source stringv is greater
      * than the block count in the destination stringv, then there won't be
      * enough room to store all the blocks. */
     if (dest->block_total < source->block_used) {
-        return 0;
+        error && (*error = stringv_insufficient_blocks);
+        return NULL;
     }
 
     for (block = 0, i = 0; i < source->string_count; ++i) {
@@ -77,17 +81,20 @@ int stringv_copy(
         block += blocks_required_by(dest, ith_string_length);
     }
 
-    return 1;
+    return dest;
 }
 
 int stringv_push_back(
         struct stringv *stringv,
         char const *string,
-        unsigned string_length)
+        unsigned string_length,
+        enum stringv_error *error)
 {
     if (!stringv || !string || string_length == 0) {
         return 0;
     }
+
+    /* TODO */
 }
 
 static unsigned blocks_required_by(
