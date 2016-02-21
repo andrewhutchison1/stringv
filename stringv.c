@@ -80,6 +80,16 @@ int stringv_copy(
     return 1;
 }
 
+int stringv_push_back(
+        struct stringv *stringv,
+        char const *string,
+        unsigned string_length)
+{
+    if (!stringv || !string || string_length == 0) {
+        return 0;
+    }
+}
+
 static unsigned blocks_required_by(
         struct stringv const *stringv,
         unsigned string_length)

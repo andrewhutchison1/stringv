@@ -1,6 +1,13 @@
 #ifndef STRINGV_H_
 #define STRINGV_H_
 
+enum stringv_error {
+    stringv_success,
+    stringv_invalid_argument,
+    stringv_block_size_mismatch,
+    stringv_insufficient_blocks
+};
+
 struct stringv {
     char *buf;
     unsigned block_total;
@@ -22,5 +29,14 @@ int stringv_init(
 int stringv_copy(
         struct stringv *dest,       /* stringv to copy to */
         struct stringv *source);    /* stringv to copy from */
+
+/* Pushes a string to the end of the stringv. Returns 1 on success, 0 on
+ * failure. The index of the newly created string element can be recovered
+ * through stringv->string_count - 1. */
+int stringv_push_back(
+        struct stringv *stringv,
+        char const *string,
+        unsigned string_length);
+
 
 #endif /* STRINGV_H_ */
