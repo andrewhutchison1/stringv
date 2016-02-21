@@ -23,9 +23,6 @@ int stringv_init(
         return 0;
     }
 
-    /* Get the block count. The block count is the quotient of size and
-     * blocksize. The remainder chars (size % blocksize) at the end of
-     * the buffer is not used. */
     stringv->buf = buf;
     stringv->block_total = buf_size / block_size;
     stringv->block_size = block_size;
@@ -87,7 +84,7 @@ static unsigned blocks_required_by(
         unsigned string_length)
 {
     assert(stringv && (string_length > 0));
-    
+
     /* For the NUL char */
     ++string_length;
 
