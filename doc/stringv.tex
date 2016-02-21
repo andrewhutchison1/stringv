@@ -1,24 +1,32 @@
-\documentclass[a4paper]{article}
+\documentclass[11pt,a4paper]{article}
 \usepackage{listings}
 \usepackage{url}
 \usepackage[grumpy]{gitinfo}
+\usepackage{enumitem}
+\usepackage{hyperref}
 
-\title{\texttt{stringv}: A string vector for ANSI C}
+\newcommand{\stringv}{\texttt{stringv}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{\stringv{}: A string vector for ANSI C}
 \author{%
     Andrew Hutchison \\%
     \url{https://github.com/andrewhutchison1} \\%
     Pertaining to revision \gitAbbrevHash (\gitAuthorDate)}
 
-\newcommand{\stringv}{\texttt{stringv}}
 
 \begin{document}
 
 \maketitle
 
-\begin{abstract}
-
-\end{abstract}
-
 \tableofcontents
+
+\section{Motivation}
+\subsection{Preliminary: Strings in C}
+Arrays of type \texttt{T} and length $N$ in C are represented by an $N$-length
+contiguous block of \texttt{T} objects.
+Strings, being arrays of \texttt{char}, must be terminated by the \texttt{NUL}
+character so that their length may be recovered (via linear search) in the case
+they have decayed to pointers.
 
 \end{document}
