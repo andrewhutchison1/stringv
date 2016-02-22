@@ -54,7 +54,7 @@ struct stringv *stringv_copy(
         struct stringv *source,
         enum stringv_error *error)
 {
-    unsigned i, block, ith_string_length;
+    unsigned i, ith_string_length;
     char *ith_string = NULL;
 
     if (!dest || !source) {
@@ -99,14 +99,6 @@ struct stringv *stringv_copy(
 
     return dest;
 }
-
-/*
-        struct stringv *stringv,
-        unsigned block_index,
-        unsigned blocks_required,
-        char const *string,
-        unsigned string_length)
-*/
 
 char const *stringv_push_back(
         struct stringv *stringv,
@@ -185,7 +177,8 @@ static unsigned blocks_required_by(
 
 static char *addressof_nth_block(struct stringv *stringv, unsigned n)
 {
-    assert(stringv && n < stringv->block_total);
+    assert(stringv);
+    assert(n < stringv->block_total);
     return stringv->buf + n * stringv->block_size;
 }
 
@@ -193,7 +186,8 @@ static char *addressof_nth_string(struct stringv *stringv, unsigned n)
 {
     unsigned m, last_null;
 
-    assert(stringv && n < stringv->string_count);
+    assert(stringv);
+    assert(n < stringv->string_count);
 
     /* The first string always starts at the start of the stringv's buffer */
     if (n == 0) {
