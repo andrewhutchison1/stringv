@@ -69,27 +69,34 @@ struct stringv *stringv_copy(
         return NULL;
     }
 
-    for (block = 0, i = 0; i < source->string_count; ++i) {
-        /* Get the address of the ith string in the source stringv, and its
-         * length. We can use strlen here without fear of buffer overrun if
-         * we assume that the stringv invariant (buffer initially zeroed)
-         * holds. */
+    dest->block_used = 0; /* TODO implement stringv_clear */
+
+    for (i = 0; i < source->string_count; ++i) {
+        /* Get the address and length of the ith string in the source
+         * stringv */
         ith_string = addressof_nth_string(source, i);
         ith_string_length = (unsigned)strlen(ith_string);
 
-        /* Copy the ith string in the source stringv to the address of the
-         * block that we are up to */
-        memcpy(addressof_nth_block(dest, block),
+        /* Write the ith string in the source stringv to the appropriate
+         * block in the destination stringv */
+        write_string_at_block(
+                dest,
+                dest->block_used,
+                blocks_required_by(dest, ith_string_length),
                 ith_string,
                 ith_string_length);
-
-        /* Now skip to the next block index in the destination stringv
-         * immediately after the string we just wrote */
-        block += blocks_required_by(dest, ith_string_length);
     }
 
     return dest;
 }
+
+/*
+        struct stringv *stringv,
+        unsigned block_index,
+        unsigned blocks_required,
+        char const *string,
+        unsigned string_length)
+*/
 
 char const *stringv_push_back(
         struct stringv *stringv,
@@ -154,7 +161,8 @@ static unsigned blocks_required_by(
         struct stringv const *stringv,
         unsigned string_length)
 {
-    assert(stringv && (string_length > 0));
+    assert(stringv);
+    assert(string_length > 0);
     assert(stringv->block_size > 0);
 
     /* For the NUL char */
