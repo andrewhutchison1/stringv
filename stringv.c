@@ -148,13 +148,16 @@ static char const *write_string_at_block(
     assert(string);
     assert(string_length > 0);
 
-    /* Get the block address from its index, write the string to this address,
-     * then bump the number of used blocks. Under the assumptions that
-     * stringv is a valid stringv, we don't need to zero out the remainder
-     * of the string's block */
+    /* Get the block address from its index and then copy over the string data
+     * to it. We only copy the string data (and not its NUL terminator) since
+     * the remainder of the buffer should be zero under the assumption that
+     * stringv is a valid stringv */
     block_address = addressof_nth_block(stringv, block_index);
     memcpy(block_address, string, string_length);
+
+    /* Bump number of blocks and string count */
     stringv->block_used += blocks_required;
+    ++stringv->string_count;
 
     return block_address;
 }
@@ -184,7 +187,7 @@ static char *addressof_nth_block(struct stringv *stringv, unsigned n)
 
 static char *addressof_nth_string(struct stringv *stringv, unsigned n)
 {
-    unsigned m, last_null;
+    unsigned i, last_null;
 
     assert(stringv);
     assert(n < stringv->string_count);
@@ -205,16 +208,16 @@ static char *addressof_nth_string(struct stringv *stringv, unsigned n)
 
     /* Otherwise, we need to iterate through the buffer in steps of
      * block_size, starting from block_size - 1. If the char at
-     * this location is 0, the next char is the start of the nth block */
+     * this location is NUL, the next char is the start of the nth block */
     last_null = stringv->block_total * stringv->block_size - 1;
-    for (m = stringv->block_size - 1;
-            m != last_null;
-            m += stringv->block_size)
+    for (i = stringv->block_size - 1;
+            i != last_null;
+            i += stringv->block_size)
     {
         /* Landing on a NUL character means that the next character starts
          * a block. So we decrement the block index to signify a block
          * being encountered */
-        if (stringv->buf[m] == '\0') {
+        if (!stringv->buf[i]) {
             --n;
         }
 
@@ -226,5 +229,5 @@ static char *addressof_nth_string(struct stringv *stringv, unsigned n)
     }
 
     assert(n == 0);
-    return stringv->buf + m + 1;
+    return stringv->buf + i + 1;
 }
