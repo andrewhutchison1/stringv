@@ -40,6 +40,15 @@ struct stringv *stringv_init(
     return stringv;
 }
 
+void stringv_clear(struct stringv *stringv)
+{
+    if (stringv) {
+        memset(stringv->buf, 0, stringv->block_total * stringv->block_size);
+        stringv->block_used = 0;
+        stringv->string_count = 0;
+    }
+}
+
 struct stringv *stringv_copy(
         struct stringv *dest,
         struct stringv *source,
@@ -69,7 +78,8 @@ struct stringv *stringv_copy(
         return NULL;
     }
 
-    dest->block_used = 0; /* TODO implement stringv_clear */
+    /* Clear the destination stringv */
+    stringv_clear(dest);
 
     for (i = 0; i < source->string_count; ++i) {
         /* Get the address and length of the ith string in the source

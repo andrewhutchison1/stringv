@@ -22,8 +22,12 @@ struct stringv *stringv_init(
         unsigned buf_size,          /* The size of the buffer, in chars */
         unsigned block_size);       /* The desired block size */
 
+/* Clears a stringv by zeroing the buffer and resetting the string count
+ * and used block count. */
+void stringv_clear(struct stringv *stringv);
+
 /* Copies the data stored in the source stringv to the destination stringv.
- * Preserves the block size of the destination stringv. Returns dest */
+ * Preserves the block size of the destination stringv. */
 struct stringv *stringv_copy(
         struct stringv *dest,       /* stringv to copy to */
         struct stringv *source,     /* stringv to copy from */
