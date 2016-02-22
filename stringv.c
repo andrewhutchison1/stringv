@@ -10,6 +10,13 @@ static unsigned blocks_required_by(
 static char *addressof_nth_block(struct stringv *stringv, unsigned n);
 static char *addressof_nth_string(struct stringv *stringv, unsigned n);
 
+static char const *write_string_at_block(
+        struct stringv *stringv,
+        unsigned block_index,
+        unsigned blocks_required,
+        char const *string,
+        unsigned string_length);
+
 struct stringv *stringv_init(
         struct stringv *stringv,
         char *buf,
@@ -84,17 +91,63 @@ struct stringv *stringv_copy(
     return dest;
 }
 
-char *stringv_push_back(
+char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
         unsigned string_length,
         enum stringv_error *error)
 {
+    unsigned blocks_required;
+
     if (!stringv || !string || string_length == 0) {
-        return 0;
+        error && (*error = stringv_invalid_argument);
+        return NULL;
     }
 
-    /* TODO */
+    /* Determine how many blocks are required by the string in this
+     * current stringv */
+    blocks_required = blocks_required_by(stringv, string_length);
+
+    /* Ensure that there are sufficient blocks to store the string */
+    if (stringv->block_used + blocks_required > stringv->block_total) {
+        error && (*error = stringv_insufficient_blocks);
+        return NULL;
+    }
+
+    /* Write the string at the appropriate block */
+    return write_string_at_block(
+            stringv,
+            stringv->block_used,
+            blocks_required,
+            string,
+            string_length);
+}
+
+static char const *write_string_at_block(
+        struct stringv *stringv,
+        unsigned block_index,
+        unsigned blocks_required,
+        char const *string,
+        unsigned string_length)
+{
+    char *block_address = NULL;
+
+    assert(stringv);
+    assert(block_index < stringv->block_total);
+    assert(blocks_required > 0);
+    assert(blocks_required + stringv->block_used <= stringv->block_total);
+    assert(string);
+    assert(string_length > 0);
+
+    /* Get the block address from its index, write the string to this address,
+     * then bump the number of used blocks. Under the assumptions that
+     * stringv is a valid stringv, we don't need to zero out the remainder
+     * of the string's block */
+    block_address = addressof_nth_block(stringv, block_index);
+    memcpy(block_address, string, string_length);
+    stringv->block_used += blocks_required;
+
+    return block_address;
 }
 
 static unsigned blocks_required_by(
