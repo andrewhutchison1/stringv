@@ -32,7 +32,7 @@ struct stringv *stringv_copy(
 /* Appends a string to the stringv, returning a pointer to its location,
  * or NULL on error. The index of the appended string can be recovered
  * through stringv->string_count - 1 */
-char *stringv_push_back(
+char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
         unsigned string_length,
