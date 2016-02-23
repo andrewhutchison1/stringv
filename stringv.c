@@ -3,25 +3,25 @@
 #include <assert.h>
 #include <string.h>
 
-static unsigned blocks_required_by(
+static int blocks_required_by(
         struct stringv const *stringv,
-        unsigned string_length);
+        int string_length);
 
-static char *addressof_nth_block(struct stringv *stringv, unsigned n);
-static char *addressof_nth_string(struct stringv *stringv, unsigned n);
+static char *addressof_nth_block(struct stringv *stringv, int n);
+static char *addressof_nth_string(struct stringv *stringv, int n);
 
 static char const *write_string_at_block(
         struct stringv *stringv,
-        unsigned block_index,
-        unsigned blocks_required,
+        int block_index,
+        int blocks_required,
         char const *string,
-        unsigned string_length);
+        int string_length);
 
 struct stringv *stringv_init(
         struct stringv *stringv,
         char *buf,
-        unsigned buf_size,
-        unsigned block_size)
+        int buf_size,
+        int block_size)
 {
     if (!stringv ||
             !buf ||
@@ -54,7 +54,7 @@ struct stringv *stringv_copy(
         struct stringv *source,
         enum stringv_error *error)
 {
-    unsigned i, ith_string_length;
+    int i, ith_string_length;
     char *ith_string = NULL;
 
     if (!dest || !source) {
@@ -85,7 +85,7 @@ struct stringv *stringv_copy(
         /* Get the address and length of the ith string in the source
          * stringv */
         ith_string = addressof_nth_string(source, i);
-        ith_string_length = (unsigned)strlen(ith_string);
+        ith_string_length = (int)strlen(ith_string);
 
         /* Write the ith string in the source stringv to the appropriate
          * block in the destination stringv */
@@ -103,10 +103,10 @@ struct stringv *stringv_copy(
 char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
-        unsigned string_length,
+        int string_length,
         enum stringv_error *error)
 {
-    unsigned blocks_required;
+    int blocks_required;
 
     if (!stringv || !string || string_length == 0) {
         error && (*error = stringv_invalid_argument);
@@ -134,10 +134,10 @@ char const *stringv_push_back(
 
 static char const *write_string_at_block(
         struct stringv *stringv,
-        unsigned block_index,
-        unsigned blocks_required,
+        int block_index,
+        int blocks_required,
         char const *string,
-        unsigned string_length)
+        int string_length)
 {
     char *block_address = NULL;
 
@@ -162,9 +162,9 @@ static char const *write_string_at_block(
     return block_address;
 }
 
-static unsigned blocks_required_by(
+static int blocks_required_by(
         struct stringv const *stringv,
-        unsigned string_length)
+        int string_length)
 {
     assert(stringv);
     assert(string_length > 0);
@@ -178,16 +178,17 @@ static unsigned blocks_required_by(
         (string_length % stringv->block_size != 0);
 }
 
-static char *addressof_nth_block(struct stringv *stringv, unsigned n)
+static char *addressof_nth_block(struct stringv *stringv, int n)
 {
     assert(stringv);
+    assert(n >= 0);
     assert(n < stringv->block_total);
     return stringv->buf + n * stringv->block_size;
 }
 
-static char *addressof_nth_string(struct stringv *stringv, unsigned n)
+static char *addressof_nth_string(struct stringv *stringv, int n)
 {
-    unsigned i, last_null;
+    int i, last_null;
 
     assert(stringv);
     assert(n < stringv->string_count);
