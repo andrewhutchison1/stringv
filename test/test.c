@@ -11,7 +11,7 @@ int run_test(test_case const* test)
     printf("%s:\t", test->name);
     result = test->function();
     printf("%s\n", result ? "succeeded" : "FAILED");
-    return !result;
+    return result;
 }
 
 int run_many(test_case const *tests, int n)
@@ -28,5 +28,5 @@ int run_many(test_case const *tests, int n)
 
     /* Print a summary */
     printf("*** Summary: %i/%i passed\n", succeeded, n);
-    return succeeded != n;
+    return succeeded == n;
 }
