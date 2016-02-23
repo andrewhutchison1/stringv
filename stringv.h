@@ -2,7 +2,7 @@
 #define STRINGV_H_
 
 enum stringv_error {
-    stringv_invalid_argument,
+    stringv_invalid_argument = 1,
     stringv_block_size_mismatch,
     stringv_insufficient_blocks
 };
