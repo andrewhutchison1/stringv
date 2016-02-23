@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <string.h>
 
+#define ERROR_OUT(error, value) ((error) && (*(error) = (value)))
+
 static int blocks_required_by(
         struct stringv const *stringv,
         int string_length);
@@ -58,7 +60,7 @@ struct stringv *stringv_copy(
     char *ith_string = NULL;
 
     if (!dest || !source) {
-        error && (*error = stringv_invalid_argument);
+        ERROR_OUT(error, stringv_invalid_argument);
         return NULL;
     }
 
@@ -66,7 +68,7 @@ struct stringv *stringv_copy(
      * block size, then there may be strings in the source stringv that
      * cannot be represented in the destination stringv. */
     if (dest->block_size < source->block_size) {
-        error && (*error = stringv_block_size_mismatch);
+        ERROR_OUT(error, stringv_block_size_mismatch);
         return NULL;
     }
 
@@ -74,7 +76,7 @@ struct stringv *stringv_copy(
      * than the block count in the destination stringv, then there won't be
      * enough room to store all the blocks. */
     if (dest->block_total < source->block_used) {
-        error && (*error = stringv_insufficient_blocks);
+        ERROR_OUT(error, stringv_insufficient_blocks);
         return NULL;
     }
 
@@ -109,7 +111,7 @@ char const *stringv_push_back(
     int blocks_required;
 
     if (!stringv || !string || string_length == 0) {
-        error && (*error = stringv_invalid_argument);
+        ERROR_OUT(error, stringv_invalid_argument);
         return NULL;
     }
 
@@ -119,7 +121,7 @@ char const *stringv_push_back(
 
     /* Ensure that there are sufficient blocks to store the string */
     if (stringv->block_used + blocks_required > stringv->block_total) {
-        error && (*error = stringv_insufficient_blocks);
+        ERROR_OUT(error, stringv_insufficient_blocks);
         return NULL;
     }
 
