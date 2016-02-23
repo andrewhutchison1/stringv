@@ -144,6 +144,7 @@ static char const *write_string_at_block(
     char *block_address = NULL;
 
     assert(stringv);
+    assert(block_index >= 0);
     assert(block_index < stringv->block_total);
     assert(blocks_required > 0);
     assert(blocks_required + stringv->block_used <= stringv->block_total);
@@ -190,9 +191,10 @@ static char *addressof_nth_block(struct stringv *stringv, int n)
 
 static char *addressof_nth_string(struct stringv *stringv, int n)
 {
-    int i, last_null;
+    int i, last_nul;
 
     assert(stringv);
+    assert(n >= 0);
     assert(n < stringv->string_count);
 
     /* The first string always starts at the start of the stringv's buffer */
@@ -212,9 +214,9 @@ static char *addressof_nth_string(struct stringv *stringv, int n)
     /* Otherwise, we need to iterate through the buffer in steps of
      * block_size, starting from block_size - 1. If the char at
      * this location is NUL, the next char is the start of the nth block */
-    last_null = stringv->block_total * stringv->block_size - 1;
+    last_nul = stringv->block_total * stringv->block_size - 1;
     for (i = stringv->block_size - 1;
-            i != last_null;
+            i != last_nul;
             i += stringv->block_size)
     {
         /* Landing on a NUL character means that the next character starts
