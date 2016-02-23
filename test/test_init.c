@@ -1,12 +1,16 @@
+#include <assert.h>
+
 #include "test.h"
 #include "../stringv.h"
 
 static int test_init_params_bad(void);
 static int test_init_params_good(void);
+static int test_init_zero_buf(void);
 
 static const test_case tests[] = {
     TEST_CASE(test_init_params_bad),
-    TEST_CASE(test_init_params_good)
+    TEST_CASE(test_init_params_good),
+    TEST_CASE(test_init_zero_buf)
 };
 
 int main(void)
@@ -32,6 +36,24 @@ static int test_init_params_good(void)
 {
     struct stringv sv = STRINGV_ZERO;
     char buf[10];
+    return !!stringv_init(&sv, buf, 10, 5);
+}
 
-    return !stringv_init(&sv, buf, 10, 5);
+/* Tests that stringv_init correctly zeroes the buffer, which is an extremely
+ * important precondition of most stringv operations */
+static int test_init_zero_buf(void)
+{
+    struct stringv sv = STRINGV_ZERO;
+    char buf[10];
+    int i;
+
+    assert(stringv_init(&sv, buf, 10, 5));
+
+    for (i = 0; i < 10; ++i) {
+        if (sv.buf[i]) {
+            return 0;
+        }
+    }
+
+    return 1;
 }
