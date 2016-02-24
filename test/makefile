@@ -4,27 +4,33 @@ CFLAGS=-Wall -Wextra -Weverything -pedantic -std=c89 -m64 -Wshadow \
 	   -Wcast-align -Wswitch-default -Wbad-function-cast -Winline -Wundef \
 	   -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code \
 	   -fno-common -fstrict-aliasing -Werror -Wstrict-overflow=5
+LDFLAGS=
 
 OBJDIR=obj
 BINDIR=bin
 
-DEPS=$(OBJDIR)/stringv.o $(OBJDIR)/test.o
 TESTS=test_init test_clear
+TESTBIN=$(addprefix $(BINDIR)/,$(TESTS))
+TESTDEPS=$(addprefix $(OBJDIR)/,stringv.o test.o)
 
-$(OBJDIR)/stringv.o: ../stringv.c
-	$(CC) $(CFLAGS) -O2 -c $< -o $@
-
-$(OBJDIR)/test.o: test.c
+# Compile the stringv module
+$(OBJDIR)/stringv.o: ../stringv.c ../stringv.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BINDIR)/test_init: test_init.c $(DEPS)
-	$(CC) $(CFLAGS) $^ -o $@
+# Compile the test harness
+$(OBJDIR)/test.o: test.c test.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BINDIR)/test_clear: test_clear.c $(DEPS)
-	$(CC) $(CFLAGS) $^ -o $@
+# Compiles the tests
+$(OBJDIR)/%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Links each test with the harness
+$(TESTBIN): $(BINDIR)/%: $(OBJDIR)/%.o $(TESTDEPS)
+	$(CC) $(LDFLAGS) $^ -o $@
 
 .PHONY: all
-all: $(DEPS) $(addprefix $(BINDIR)/,$(TESTS))
+all: $(TESTBIN)
 
 .PHONY: clean
 clean:
