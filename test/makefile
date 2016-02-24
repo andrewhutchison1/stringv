@@ -22,7 +22,7 @@ $(OBJDIR)/test.o: test.c test.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compiles the tests
-$(OBJDIR)/%.o: %.c
+$(OBJDIR)/%.o: %.c test.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Links each test with the harness
