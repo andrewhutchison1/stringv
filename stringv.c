@@ -23,11 +23,11 @@ struct stringv *stringv_init(
         int buf_size,
         int block_size)
 {
-    if (!stringv ||
-            !buf ||
-            buf_size <= 1 ||
-            block_size <= 1 ||
-            block_size > buf_size) {
+    if (!stringv
+            || !buf
+            || buf_size <= 1
+            || block_size <= 1
+            || block_size > buf_size) {
         return NULL;
     }
 
