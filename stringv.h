@@ -57,7 +57,22 @@ struct stringv *stringv_init(
 void stringv_clear(struct stringv *stringv);
 
 /* Copies the data stored in the source stringv to the destination stringv.
- * Preserves the block size of the destination stringv. */
+ * Preserves the block size of the destination stringv.
+ *
+ *      dest        The stringv to write to. dest is cleared as if through
+ *                  a call to stringv_clear (its block size is retained).
+ *      source      The stringv to read from.
+ *      error       The address of a value to receive error information, if
+ *                  any. On success this value is not written to.
+ *
+ * PRE:     dest != NULL
+ *          source != NULL
+ *
+ * POST:    source unchanged
+ *          dest->block_size unchanged
+ *          dest->string_count = source->string_count
+ *
+ */
 struct stringv *stringv_copy(
         struct stringv *dest,       /* stringv to copy to */
         struct stringv *source,     /* stringv to copy from */

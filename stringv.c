@@ -56,7 +56,7 @@ struct stringv *stringv_copy(
         struct stringv *source,
         enum stringv_error *error)
 {
-    int i, ith_string_length;
+    int one_to_one, i, ith_string_length;
     char *ith_string = NULL;
 
     if (!dest || !source) {
@@ -64,24 +64,33 @@ struct stringv *stringv_copy(
         return NULL;
     }
 
-    /* If the destination stringv's block size is smaller than the source's
-     * block size, then there may be strings in the source stringv that
-     * cannot be represented in the destination stringv. */
-    if (dest->block_size < source->block_size) {
-        ERROR_OUT(error, stringv_block_size_mismatch);
-        return NULL;
-    }
-
-    /* Moreover, if the number of used blocks in the source stringv is greater
-     * than the block count in the destination stringv, then there won't be
-     * enough room to store all the blocks. */
-    if (dest->block_total < source->block_used) {
-        ERROR_OUT(error, stringv_insufficient_blocks);
-        return NULL;
-    }
-
     /* Clear the destination stringv */
     stringv_clear(dest);
+
+    /* If the destination stringv has the same block size, then we can just
+     * memcpy the entire block over. It also needs to have the same or a
+     * greater block total. */
+    if (dest->block_size == source->block_size
+            && dest->block_total >= source->block_total) {
+        /* Copy the source's string data */
+        memcpy(
+                dest->buf,
+                source->buf,
+                source->block_used * source->block_size);
+
+        /* Put it in a consistent state */
+        dest->block_used = source->block_used;
+        dest->string_count = source->string_count;
+        return dest;
+    }
+
+    /* If the destination stringv would be one-to-one after copying,
+     * we don't need to recompute the required blocks for each string in the
+     * loop below, since each block in the source stringv maps uniquely to a
+     * block in the destination stringv (and each block contains a single
+     * string). This is an optimisation for stringv's ideal use case. */
+    one_to_one = dest->block_size >= source->block_size
+            && dest->block_total >= source->block_total;
 
     for (i = 0; i < source->string_count; ++i) {
         /* Get the address and length of the ith string in the source
@@ -94,7 +103,7 @@ struct stringv *stringv_copy(
         write_string_at_block(
                 dest,
                 dest->block_used,
-                blocks_required_by(dest, ith_string_length),
+                one_to_one ? 1 : blocks_required_by(dest, ith_string_length),
                 ith_string,
                 ith_string_length);
     }
