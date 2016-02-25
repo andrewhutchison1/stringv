@@ -111,17 +111,17 @@ struct stringv *stringv_copy(
 char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
-        int string_length)
+        int length)
 {
     int blocks_required;
 
-    if (!stringv || !string || string_length == 0) {
+    if (!stringv || !string || length <= 0) {
         return NULL;
     }
 
     /* Determine how many blocks are required by the string in this
      * current stringv */
-    blocks_required = blocks_required_by(stringv, string_length);
+    blocks_required = blocks_required_by(stringv, length);
 
     /* Ensure that there are sufficient blocks to store the string */
     if (stringv->block_used + blocks_required > stringv->block_total) {
@@ -134,7 +134,7 @@ char const *stringv_push_back(
             stringv->block_used,
             blocks_required,
             string,
-            string_length);
+            length);
 }
 
 static char const *write_string_at_block(
