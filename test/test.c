@@ -30,3 +30,24 @@ int run_many(test_case const *tests, int n)
     printf("*** Summary: %i/%i passed\n", succeeded, n);
     return succeeded == n;
 }
+
+void dump_memory(char const *ptr, int size, int groupby)
+{
+    int i;
+
+    assert(ptr && size > 0);
+
+    for (i = 0; i < size; ++i) {
+        if (i && groupby && (i % groupby == 0)) {
+            putchar(' ');
+        }
+
+        if (ptr[i]) {
+            putchar(ptr[i]);
+        } else {
+            putchar('.');
+        }
+    }
+
+    printf("\n");
+}

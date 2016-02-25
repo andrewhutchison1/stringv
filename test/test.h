@@ -30,4 +30,7 @@ int run_test(test_case const* test);
  * succeed, and zero otherwise */
 int run_many(test_case const *tests, int n);
 
+/* Dumps a block of raw memory to standard out */
+void dump_memory(char const *ptr, int size, int groupby);
+
 #endif /* TEST_H_ */
