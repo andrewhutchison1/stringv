@@ -40,17 +40,18 @@ struct stringv *stringv_init(
         int block_size);
 
 /* Clears a stringv by zeroing the buffer and resetting the string count
- * and used block count.
+ * and used block count. Returns its argument.
  *
  *      stringv     The stringv to clear. If this parameter is NULL then no
  *                  work is done.
+ *      RETURNS     stringv
  *
  *      PRE:        (stringv != NULL) ==> (stringv->buf != NULL)
  *      POST:       (stringv != NULL) ==> (stringv->buf == {0, ..., 0})
  *                          && (stringv->block_used == 0)
  *                          && (stringv->string_count == 0)
  */
-void stringv_clear(struct stringv *stringv);
+struct stringv *stringv_clear(struct stringv *stringv);
 
 /* Copies the data stored in the source stringv to the destination stringv.
  * Preserves the block size of the destination stringv. If the function

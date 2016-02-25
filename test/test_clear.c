@@ -41,7 +41,7 @@ int test_clear_consistent(void)
     assert(sv.block_used != 0);
     assert(sv.string_count != 0);
 
-    stringv_clear(&sv);
+    (void)stringv_clear(&sv);
 
     return sv.buf == p
         && sv.block_total == block_total
@@ -62,7 +62,7 @@ int test_clear_zero_buf(void)
     assert(stringv_init(&sv, buf, 12, 3));
     memcpy(sv.buf, data, 12);
 
-    stringv_clear(&sv);
+    (void)stringv_clear(&sv);
 
     /* Now check that the buffer is zeroed */
     for (i = 0; i < 12; ++i) {

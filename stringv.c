@@ -40,13 +40,15 @@ struct stringv *stringv_init(
     return stringv;
 }
 
-void stringv_clear(struct stringv *stringv)
+struct stringv *stringv_clear(struct stringv *stringv)
 {
     if (stringv) {
         memset(stringv->buf, 0, stringv->block_total * stringv->block_size);
         stringv->block_used = 0;
         stringv->string_count = 0;
     }
+
+    return stringv;
 }
 
 struct stringv *stringv_copy(
@@ -61,7 +63,7 @@ struct stringv *stringv_copy(
     }
 
     /* Clear the destination stringv */
-    stringv_clear(dest);
+    (void)stringv_clear(dest);
 
     /* If the destination stringv has the same block size, then we can just
      * memcpy the entire block over. It also needs to have the same or a
