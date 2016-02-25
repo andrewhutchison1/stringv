@@ -15,12 +15,32 @@ struct stringv {
     int string_count;
 };
 
-/* Initialises a stringv, returns a pointer to stringv, or NULL on error */
+/* Initialises a stringv to an initial valid (but empty) state with the
+ * given block size.
+ *
+ *      buf         A pointer to a writable buffer which will serve as the
+ *                  storage for the stringv. buf must be NUL terminated.
+ *      buf_size    The size of buf, in chars, including the terminating
+ *                  character.
+ *      block_size  The desired size of the blocks. The block size is measured
+ *                  in characters and includes the NUL terminator.
+ *                  The block size should match the expected median length
+ *                  of the stored strings.
+ *
+ * PRE:     stringv != NULL
+ *          buf != NULL
+ *          buf_size > 1
+ *          1 < block_size <= buf_size
+ *          buf[buf_size] == '\0'
+ *
+ * POST:    stringv->block_used == stringv->string_count == 0
+ *          stringv->buf = {0, ..., 0}
+ */
 struct stringv *stringv_init(
-        struct stringv *stringv,    /* stringv object to initialise */
-        char *buf,                  /* The buffer to use, must be writeable */
-        int buf_size,               /* The size of the buffer, in chars */
-        int block_size);            /* The desired block size */
+        struct stringv *stringv,
+        char *buf,
+        int buf_size,
+        int block_size);
 
 /* Clears a stringv by zeroing the buffer and resetting the string count
  * and used block count. */
