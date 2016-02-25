@@ -1,11 +1,11 @@
 CC=clang
-CFLAGS=-std=c89 -pedantic -m64 -fno-common -fstrict-aliasing @warnings
+CFLAGS=-std=c89 -pedantic -m64 -fno-common -fstrict-aliasing @warnings -ggdb3
 LDFLAGS=
 
 OBJDIR=obj
 BINDIR=bin
 
-TESTS=test_init test_clear
+TESTS=test_init test_clear test_copy
 TESTBIN=$(addprefix $(BINDIR)/,$(TESTS))
 TESTDEPS=$(addprefix $(OBJDIR)/,stringv.o test.o)
 
