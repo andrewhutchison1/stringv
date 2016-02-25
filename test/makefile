@@ -1,9 +1,5 @@
 CC=clang
-CFLAGS=-Wall -Wextra -Weverything -pedantic -std=c89 -m64 -Wshadow \
-	   -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes \
-	   -Wcast-align -Wswitch-default -Wbad-function-cast -Winline -Wundef \
-	   -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code \
-	   -fno-common -fstrict-aliasing -Werror -Wstrict-overflow=5
+CFLAGS=-std=c89 -pedantic -m64 -fno-common -fstrict-aliasing @warnings
 LDFLAGS=
 
 OBJDIR=obj
@@ -34,4 +30,4 @@ all: $(TESTBIN)
 
 .PHONY: clean
 clean:
-	rm -rf ./$(OBJDIR)/* ./$(BINDIR)/*
+	rm ./$(OBJDIR)/* ./$(BINDIR)/*
