@@ -51,3 +51,11 @@ void dump_memory(char const *ptr, int size, int groupby)
 
     printf("\n");
 }
+
+void dump_stringv(struct stringv const *stringv)
+{
+    /* Assumes the stringv is valid */
+    dump_memory(stringv->buf,
+            stringv->block_total * stringv->block_size,
+            stringv->block_size);
+}

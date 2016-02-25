@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#include "../stringv.h"
+
 /* Test functions must not take any arguments. They return 0 on failure and
  * a nonzero value on success */
 typedef int (*test_function)(void);
@@ -30,7 +32,10 @@ int run_test(test_case const* test);
  * succeed, and zero otherwise */
 int run_many(test_case const *tests, int n);
 
-/* Dumps a block of raw memory to standard out */
+/* Dumps a block of raw memory to stdout */
 void dump_memory(char const *ptr, int size, int groupby);
+
+/* Dumps a stringv's buffer to stdout */
+void dump_stringv(struct stringv const *stringv);
 
 #endif /* TEST_H_ */
