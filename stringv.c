@@ -3,8 +3,6 @@
 #include <assert.h>
 #include <string.h>
 
-#define ERROR_OUT(error, value) ((error) && (*(error) = (value)))
-
 static int blocks_required_by(
         struct stringv const *stringv,
         int string_length);
@@ -53,14 +51,12 @@ void stringv_clear(struct stringv *stringv)
 
 struct stringv *stringv_copy(
         struct stringv *dest,
-        struct stringv *source,
-        enum stringv_error *error)
+        struct stringv *source)
 {
     int one_to_one, i, ith_string_length;
     char *ith_string = NULL;
 
     if (!dest || !source) {
-        ERROR_OUT(error, stringv_invalid_argument);
         return NULL;
     }
 
@@ -89,8 +85,9 @@ struct stringv *stringv_copy(
      * loop below, since each block in the source stringv maps uniquely to a
      * block in the destination stringv (and each block contains a single
      * string). This is an optimisation for stringv's ideal use case. */
-    one_to_one = dest->block_size >= source->block_size
-            && dest->block_total >= source->block_total;
+    one_to_one = (source->block_used == source->string_count)
+        && (dest->block_size >= source->block_size)
+        && (dest->block_total >= source->block_total);
 
     for (i = 0; i < source->string_count; ++i) {
         /* Get the address and length of the ith string in the source
@@ -114,13 +111,11 @@ struct stringv *stringv_copy(
 char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
-        int string_length,
-        enum stringv_error *error)
+        int string_length)
 {
     int blocks_required;
 
     if (!stringv || !string || string_length == 0) {
-        ERROR_OUT(error, stringv_invalid_argument);
         return NULL;
     }
 
@@ -130,7 +125,6 @@ char const *stringv_push_back(
 
     /* Ensure that there are sufficient blocks to store the string */
     if (stringv->block_used + blocks_required > stringv->block_total) {
-        ERROR_OUT(error, stringv_insufficient_blocks);
         return NULL;
     }
 

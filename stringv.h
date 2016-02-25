@@ -1,12 +1,6 @@
 #ifndef STRINGV_H_
 #define STRINGV_H_
 
-enum stringv_error {
-    stringv_invalid_argument = 1,
-    stringv_block_size_mismatch,
-    stringv_insufficient_blocks
-};
-
 struct stringv {
     char *buf;
     int block_total;
@@ -57,13 +51,13 @@ struct stringv *stringv_init(
 void stringv_clear(struct stringv *stringv);
 
 /* Copies the data stored in the source stringv to the destination stringv.
- * Preserves the block size of the destination stringv.
+ * Preserves the block size of the destination stringv. Returns NULL if
+ * invalid arguments are given ot there in insufficient space to copy the
+ * data. Otherwise dest is returned.
  *
  *      dest        The stringv to write to. dest is cleared as if through
  *                  a call to stringv_clear (its block size is retained).
  *      source      The stringv to read from.
- *      error       The address of a value to receive error information, if
- *                  any. On success this value is not written to.
  *
  * PRE:     dest != NULL
  *          source != NULL
@@ -71,12 +65,10 @@ void stringv_clear(struct stringv *stringv);
  * POST:    source unchanged
  *          dest->block_size unchanged
  *          dest->string_count = source->string_count
- *
  */
 struct stringv *stringv_copy(
-        struct stringv *dest,       /* stringv to copy to */
-        struct stringv *source,     /* stringv to copy from */
-        enum stringv_error *error);
+        struct stringv *dest,
+        struct stringv *source);
 
 /* Appends a string to the stringv, returning a pointer to its location,
  * or NULL on error. The index of the appended string can be recovered
@@ -84,7 +76,6 @@ struct stringv *stringv_copy(
 char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
-        int string_length,
-        enum stringv_error *error);
+        int string_length);
 
 #endif /* STRINGV_H_ */
