@@ -52,7 +52,7 @@ void stringv_clear(struct stringv *stringv);
 
 /* Copies the data stored in the source stringv to the destination stringv.
  * Preserves the block size of the destination stringv. Returns NULL if
- * invalid arguments are given ot there in insufficient space to copy the
+ * invalid arguments are given or there is insufficient space to copy the
  * data. Otherwise dest is returned.
  *
  *      dest        The stringv to write to. dest is cleared as if through
