@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-std=c89 -pedantic -m64 -fno-common -fstrict-aliasing @warnings -ggdb3
+CFLAGS=-std=c89 -pedantic -m64 -fno-common -fstrict-aliasing @warnings
 LDFLAGS=
 
 OBJDIR=obj
