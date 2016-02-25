@@ -127,9 +127,6 @@ int test_copy_succeeds_overfull(void)
 
     assert(stringv_copy(&sv2, &sv1));
 
-    dump_memory(sv1.buf, 6, 3);
-    dump_memory(sv2.buf, 12, 6);
-
     return memcmp(sv2.buf, save, 6) == 0
         && sv2.block_used == 1
         && sv2.string_count == 1;
@@ -137,6 +134,22 @@ int test_copy_succeeds_overfull(void)
 
 int test_copy_succeeds_underfull(void)
 {
-    /* TODO */
-    return 0;
+    struct stringv sv1, sv2;
+    char b1[12], b2[8];
+    char save[] = {'a','b','c',0,0,0,'d','e','f',0,0,0};
+    char save1[] = {'a','b','c',0,'d','e','f',0};
+
+    assert(stringv_init(&sv1, b1, 12, 3));
+    assert(stringv_init(&sv2, b2, 8, 4));
+
+    /* Mock out the insertion of a few strings */
+    memcpy(sv1.buf, save, 12);
+    sv1.block_used = 4;
+    sv1.string_count = 2;
+
+    assert(stringv_copy(&sv2, &sv1));
+
+    return memcmp(sv2.buf, save1, 8) == 0
+        && sv2.block_used == 2
+        && sv2.string_count == 2;
 }
