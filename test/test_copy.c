@@ -27,6 +27,7 @@ int main(void)
     return !run_many(tests, TEST_COUNT(tests));
 }
 
+/* Tests that bad parameters are reported correctly */
 int test_copy_params_bad(void)
 {
     struct stringv sv1 = STRINGV_ZERO;
@@ -41,6 +42,7 @@ int test_copy_params_bad(void)
         && !stringv_copy(&sv1, NULL);
 }
 
+/* Tests that the source stringv is not modified by stringv_copy */
 int test_copy_source_unchanged(void)
 {
     struct stringv sv1 = STRINGV_ZERO;
@@ -60,6 +62,8 @@ int test_copy_source_unchanged(void)
     return memcmp(sv1.buf, save, 9) == 0;
 }
 
+/* Ensures that stringv_copy does not touch the block size parameter of the
+ * destination stringv */
 int test_copy_block_size_unchanged(void)
 {
     struct stringv sv1 = STRINGV_ZERO;
@@ -74,6 +78,7 @@ int test_copy_block_size_unchanged(void)
     return sv2.block_size == 4;
 }
 
+/* Tests that the string count is preserved after a call to stringv_copy */
 int test_copy_count(void)
 {
     struct stringv sv1 = STRINGV_ZERO;
@@ -89,9 +94,12 @@ int test_copy_count(void)
     sv1.block_used = 1;
     assert(stringv_copy(&sv2, &sv1));
 
-    return sv2.string_count = 1;
+    return sv2.string_count == 1;
 }
 
+/* Tests successful copying for a one-to-one copy operation. This hits
+ * the most optimal case of stringv_copy, where the source and destination
+ * stringvs have the same dimensions. */
 int test_copy_succeeds_one_to_one(void)
 {
     struct stringv sv1, sv2;
@@ -112,6 +120,9 @@ int test_copy_succeeds_one_to_one(void)
         && sv2.string_count == 3;
 }
 
+/* Tests successful copying for a copy from an overfull stringv. This hits
+ * the most general code path where the number of required blocks must be
+ * recomputed for each string */
 int test_copy_succeeds_overfull(void)
 {
     struct stringv sv1, sv2;
@@ -132,6 +143,8 @@ int test_copy_succeeds_overfull(void)
         && sv2.string_count == 1;
 }
 
+/* Tests that an underfull stringv (one where at least one entire block is
+ * zero) copies correctly */
 int test_copy_succeeds_underfull(void)
 {
     struct stringv sv1, sv2;
