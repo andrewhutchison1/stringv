@@ -88,7 +88,7 @@ struct stringv *stringv_copy(
  *                  ated, this can be the (casted) result of strlen.
  *      RETURNS     A non-writable pointer to the written string in the
  *                  stringv if successful, otherwise NULL is returned. The
- *                  function can fail when the arguments are invalid (see
+ *                  function will fail when the arguments are invalid (see
  *                  preconditions) or there is insufficient space for writing
  *                  the string.
  *
