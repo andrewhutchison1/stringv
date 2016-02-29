@@ -53,25 +53,28 @@ struct stringv *stringv_init(
  */
 struct stringv *stringv_clear(struct stringv *stringv);
 
-/* Copies the data stored in the source stringv to the destination stringv.
- * Preserves the block size of the destination stringv. If the function
- * fails, no external state is modified.
+/* Attempts to copy the strings stored in the source stringv to the dest-
+ * ination stringv. The destination stringv is cleared before copying, and
+ * its block size is preserved. Since the block sizes of the source and
+ * destination stringv may be different, and their sizes are fixed, it may
+ * not be possible to store all strings from the source stringv in the
+ * destination stringv. stringv_copy will copy as many strings as possible,
+ * and return the number of strings copied.
  *
  *      dest        The stringv to write to. dest is cleared as if through
  *                  a call to stringv_clear (its block size is retained).
  *      source      The stringv to read from.
- *      RETURNS     A pointer to dest if the the function succeeds,
- *                  NULL otherwise.
+ *      RETURNS     The number of strings copied.
  *
  *      PRE:        dest != NULL
  *                  source != NULL
  *      POST:       source unchanged
  *                  dest->block_size unchanged
- *                  dest->string_count = source->string_count
+ *                  dest->string_count <= source->string_count
  */
-struct stringv *stringv_copy(
+int stringv_copy(
         struct stringv *dest,
-        struct stringv *source);
+        struct stringv const *source);
 
 /* Appends a string to the stringv, returning a pointer to its loctions,
  * or NULL on error. The index of the appended string can be recovered
