@@ -238,7 +238,7 @@ int copy_injective(
      * than or equal to the source block size, and we don't need to recompute
      * the string length */
     for (; i < source->string_count; ++i) {
-        write_string_at_block(
+        (void)write_string_at_block(
                 dest,
                 dest->block_used,
                 1,
@@ -263,6 +263,11 @@ int copy_iterative(
         ith_string = addressof_nth_string(source, i);
         ith_string_length = (int)strlen(ith_string);
 
+        /* Unlike copy_bijective and copy_injective, we are NOT sure that
+         * string write can fail. If it doesn't fail, increment the written
+         * string count. write_string_at_block only fails when there is
+         * insufficient space to perform a write, so when it fails we
+         * break and report the number of strings written up to that point */
         if (write_string_at_block(
                 dest,
                 dest->block_used,
