@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-std=c89 -pedantic -m64 -fno-common -fstrict-aliasing @warnings
+CFLAGS=-std=c89 -pedantic -m64 -fno-common -fstrict-aliasing @warnings -ggdb3
 LDFLAGS=
 
 OBJDIR=obj
@@ -30,4 +30,4 @@ all: $(TESTBIN)
 
 .PHONY: clean
 clean:
-	rm ./$(OBJDIR)/* ./$(BINDIR)/*
+	rm -rf ./$(OBJDIR)/* ./$(BINDIR)/*
