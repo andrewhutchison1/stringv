@@ -22,13 +22,6 @@ static int copy_iterative(
         struct stringv *dest,
         struct stringv const *source);
 
-static char const *write_string_at_block(
-        struct stringv *stringv,
-        int block_index,
-        int blocks_required,
-        char const *string,
-        int string_length);
-
 struct stringv *stringv_init(
         struct stringv *stringv,
         char *buf,
@@ -85,17 +78,18 @@ int stringv_copy(
      * memcpy the entire block over. It also needs to have the same or a
      * greater block total. */
     if (dest->block_size == source->block_size
-            && dest->block_total >= source->block_total) {
+            && dest->block_total >= source->block_used) {
         return copy_bijective(dest, source);
     }
 
-    /* If the source stringv has the same number of used blocks as its string
-     * count, and the destination's block size is greater than or equal to that
-     * of the source, then we know for certain that each string only
-     * requires a single block in the destination stringv. This means we can
-     * skip computing the required blocks for each string */
+    /* If the destination stringv has a block size greater than or equal to
+     * the source's block size, each source string fits in a single
+     * source block, and there are at least as many total destination blocks
+     * as there are used source blocks, then we don't need to compute the
+     * length of each string before copying it into the destination */
     if (dest->block_size >= source->block_size
-            && source->block_used == source->string_count) {
+            && source->block_used == source->string_count
+            && dest->block_total >= source->block_used) {
         return copy_injective(dest, source);
     }
 
@@ -109,6 +103,7 @@ char const *stringv_push_back(
         int length)
 {
     int blocks_required = 0;
+    char *block_address = NULL;
 
     if (!stringv || !string || length <= 0) {
         return NULL;
@@ -123,13 +118,15 @@ char const *stringv_push_back(
         return NULL;
     }
 
-    /* Write the string at the appropriate block */
-    return write_string_at_block(
-            stringv,
-            stringv->block_used,
-            blocks_required,
+    block_address = addressof_nth_block(stringv, stringv->block_used);
+    memcpy(
+            block_address,
             string,
             length);
+
+    stringv->block_used += blocks_required;
+    ++stringv->string_count;
+    return block_address;
 }
 
 int blocks_required_by(
@@ -230,22 +227,25 @@ int copy_injective(
     assert(source->block_size <= dest->block_size);
     assert(source->block_used == source->string_count);
 
-    /* We can simply loop through the source stringv's strings, writing them
-     * to the destination stringv as we go. Note that the blocks required are
-     * not computed at each iteration, instead they are hardcoded as 1. For
-     * the string length argument, we just give it the source block size
-     * subtracted by 1. This is because the destination block size is larger
-     * than or equal to the source block size, and we don't need to recompute
-     * the string length */
     for (; i < source->string_count; ++i) {
-        (void)write_string_at_block(
-                dest,
-                dest->block_used,
-                1,
+        /* Copy the ith string in the source stringv to the nth block
+         * in the destination stringv. Since we *know* that each string
+         * in the source stringv occupies exactly one block in both the
+         * source and destination stringv, we copy source->block_size - 1
+         * chars instead of computing the length of each string at each
+         * iteration. NUL termination is acheived for free since the copy
+         * operation clears the dest stringv. */
+        memcpy(
+                addressof_nth_block(dest, dest->block_used),
                 addressof_nth_string(source, i),
                 source->block_size - 1);
+
+        /* All strings occupy one block */
+        ++dest->block_used;
+        ++dest->string_count;
     }
 
+    /* This function always copies all strings */
     return source->string_count;
 }
 
@@ -253,66 +253,29 @@ int copy_iterative(
         struct stringv *dest,
         struct stringv const *source)
 {
-    int i = 0, ith_string_length = 0, strings_copied = 0;
+    int i = 0, ith_string_length = 0, blocks_required = 0, strings_copied = 0;
     char *ith_string = NULL;
-
-    assert(dest);
-    assert(source);
 
     for (; i < source->string_count; ++i) {
         ith_string = addressof_nth_string(source, i);
         ith_string_length = (int)strlen(ith_string);
+        blocks_required = blocks_required_by(dest, ith_string_length);
 
-        /* Unlike copy_bijective and copy_injective, we are NOT sure that
-         * string write can fail. If it doesn't fail, increment the written
-         * string count. write_string_at_block only fails when there is
-         * insufficient space to perform a write, so when it fails we
-         * break and report the number of strings written up to that point */
-        if (write_string_at_block(
-                dest,
-                dest->block_used,
-                blocks_required_by(dest, ith_string_length),
-                ith_string,
-                ith_string_length)) {
-            ++strings_copied;
-        } else {
+        /* If there is insufficient room, stop copying */
+        if (dest->block_used + blocks_required > dest->block_total) {
             break;
         }
+
+        /* Otherwise, copy the string over */
+        memcpy(
+                addressof_nth_block(dest, dest->block_used),
+                ith_string,
+                ith_string_length);
+
+        dest->block_used += blocks_required;
+        ++dest->string_count;
+        ++strings_copied;
     }
 
     return strings_copied;
-}
-
-char const *write_string_at_block(
-        struct stringv *stringv,
-        int block_index,
-        int blocks_required,
-        char const *string,
-        int string_length)
-{
-    char *block_address = NULL;
-
-    assert(stringv);
-    assert(block_index >= 0);
-    assert(block_index < stringv->block_total);
-    assert(blocks_required > 0);
-    assert(string);
-    assert(string_length > 0);
-
-    if (blocks_required + stringv->block_used > stringv->block_total) {
-        return NULL;
-    }
-
-    /* Get the block address from its index and then copy over the string data
-     * to it. We only copy the string data (and not its NUL terminator) since
-     * the remainder of the buffer should be zero under the assumption that
-     * stringv is a valid stringv */
-    block_address = addressof_nth_block(stringv, block_index);
-    memcpy(block_address, string, string_length);
-
-    /* Bump number of blocks and string count */
-    stringv->block_used += blocks_required;
-    ++stringv->string_count;
-
-    return block_address;
 }
