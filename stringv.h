@@ -93,7 +93,7 @@ int stringv_copy(
         struct stringv *dest,
         struct stringv const *source);
 
-/* Appends a string to the stringv, returning a pointer to its loctions,
+/* Appends a string to the stringv, returning a pointer to its location,
  * or NULL on error. The index of the appended string can be recovered
  * immediately through stringv->string_count - 1. The pointer returned
  * is const, since overwriting the string's blocks may violate the
@@ -123,5 +123,60 @@ char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
         int length);
+
+/* Prepends a string to the stringv, returning a pointer to its location, or
+ * NULL on error. If the function succeeds, the index of the prepended string
+ * will be zero. Like stringv_push_back, the returned pointer is const so that
+ * client code doesn't have a chance of overwriting the block boundary, hence
+ * violating the stringv invariants. If the function fails, no external state
+ * is modified.
+ *
+ *      stringv     The stringv to write to.
+ *      string      The string to write to the stringv. NUL termination is not
+ *                  required.
+ *      length      The length of the string, or how many chars to write to the
+ *                  stringv.
+ *      RETURNS     A non-writable pointer on success, or NULL on failure. The
+ *                  function will fail when the preconditions are not satisfied
+ *                  or there is insufficient space in the stringv.
+ *
+ *      PRE:        stringv != NULL
+ *                  string != NULL
+ *                  length > 0
+ *      POST:       stringv->block_used increased
+ *                  stringv->string_count incremented
+ *                  return pointer == &(0th string) == &stringv->buf[0]
+ */
+char const *stringv_push_front(
+        struct stringv *stringv,
+        char const *string,
+        int length);
+
+/* Inserts a string at the specified string index, returning a pointer to it,
+ * or NULL on error. If the function succeeds, the string will be written into
+ * the buffer managed by the stringv object such that its index will be the
+ * index as given by the corresponding function argument. This function will
+ * fail for invalid arguments or insufficient space. If the function fails,
+ * no external state is modified.
+ *
+ *      stringv     The stringv to write to.
+ *      string      The string to write to the stringv. NUL termination is not
+ *                  required.
+ *      length      The length of the string, or how many chars to write to the
+ *                  stringv.
+ *      RETURNS     A non-writable pointer to the written string on success,
+ *                  or NULL on failure.
+ *
+ *      PRE:        stringv != NULL
+ *                  string != NULL
+ *                  length > 0
+ *                  index >= 0 && index < stringv->string_count
+ *      POST:       stringv_get(stringv, index) == string
+ */
+char const *stringv_insert(
+        struct stringv *stringv,
+        char const *string,
+        int length,
+        int index);
 
 #endif /* STRINGV_H_ */

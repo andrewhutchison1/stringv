@@ -22,6 +22,16 @@ static int copy_iterative(
         struct stringv *dest,
         struct stringv const *source);
 
+static char *shift_blocks_forward(
+        struct stringv *stringv,
+        int block_index,
+        int n);
+
+static char *shift_blocks_backward(
+        struct stringv *stringv,
+        int block_index,
+        int n);
+
 struct stringv *stringv_init(
         struct stringv *stringv,
         char *buf,
@@ -136,6 +146,96 @@ char const *stringv_push_back(
     stringv->block_used += blocks_required;
     ++stringv->string_count;
     return block_address;
+}
+
+char const *stringv_push_front(
+        struct stringv *stringv,
+        char const *string,
+        int length)
+{
+    int blocks_required = 0;
+
+    /* FIXME: shift_blocks_backward is required for speculative insertion
+     * functions that haven't been implemented yet. I write it concurrently
+     * with shift_blocks_forward due to their similarity, but strict compiler
+     * warnings will flag it as an unused function. So until those insertion
+     * routines are implemented, this must stay. */
+    (void)shift_blocks_backward;
+
+    if (!stringv || !string || length <= 0) {
+        return NULL;
+    }
+
+    /* If the stringv is empty, just do a push_back which doesn't involve
+     * any shifting. */
+    if (stringv->string_count == 0) {
+        return stringv_push_back(stringv, string, length);
+    }
+
+    blocks_required = blocks_required_by(stringv, length);
+    if (stringv->block_used + blocks_required > stringv->block_total) {
+        return NULL;
+    }
+
+    /* In push_back we would determine the block write address here, but it
+     * is fixed as zero as we are inserting to the beginning of the buffer.
+     * Instead, we need to shift the blocks forward as appropriate. The shift
+     * operation is guarunteed to succeed since we have just confirmed that
+     * there is sufficient space. Furthermore, we don't need to save the
+     * return address since we know it is simply stringv->buf */
+    shift_blocks_forward(stringv, 0, blocks_required);
+    memcpy(stringv->buf, string, length);
+
+    /* We need to zero out the remainder of the block(s) that were previously
+     * occupied and moved from */
+    memset(
+            stringv->buf + length,
+            0,
+            blocks_required * stringv->block_size - length);
+
+    stringv->block_used += blocks_required;
+    ++stringv->string_count;
+    return stringv->buf;
+}
+
+char const *stringv_insert(
+        struct stringv *stringv,
+        char const *string,
+        int length,
+        int index)
+{
+    char *dest = NULL;
+    int blocks_required = 0;
+
+    if (!stringv
+            || !string
+            || length < 0
+            || index < 0
+            || index > stringv->string_count) {
+        return NULL;
+    }
+
+    if ((stringv->string_count == 0 && index == 0)
+            || index == stringv->string_count) {
+        return stringv_push_back(stringv, string, length);
+    }
+
+    blocks_required = blocks_required_by(stringv, length);
+    if (stringv->block_used + blocks_required > stringv->block_total) {
+        return NULL;
+    }
+
+    dest = shift_blocks_forward(stringv, index, blocks_required);
+    memcpy(dest, string, length);
+
+    memset(
+            dest + length,
+            0,
+            blocks_required * stringv->block_size - length);
+
+    stringv->block_used += blocks_required;
+    ++stringv->string_count;
+    return dest;
 }
 
 int blocks_required_by(
@@ -265,6 +365,9 @@ int copy_iterative(
     int i = 0, ith_string_length = 0, blocks_required = 0, strings_copied = 0;
     char *ith_string = NULL;
 
+    assert(dest);
+    assert(source);
+
     for (; i < source->string_count; ++i) {
         /* Since we don't know before hand whether the source strings will
          * all fit in the destination stringv, we need to compute the length
@@ -291,4 +394,52 @@ int copy_iterative(
     }
 
     return strings_copied;
+}
+
+static char *shift_blocks_forward(
+        struct stringv *stringv,
+        int block_index,
+        int n)
+{
+    char *source = NULL, *dest = NULL;
+    int size = 0;
+
+    assert(stringv);
+    assert(block_index >= 0);
+    assert(block_index < stringv->block_used);
+    assert(n >= 0);
+    assert(n < stringv->block_total);
+
+    source = addressof_nth_block(stringv, block_index);
+    if (n == 0) {
+        return source;
+    }
+
+    dest = source + n * stringv->block_size;
+    size = (stringv->block_used - block_index) * stringv->block_size;
+    memmove(dest, source, size);
+    return source;
+}
+
+static char *shift_blocks_backward(
+        struct stringv *stringv,
+        int block_index,
+        int n)
+{
+    char *start_address = NULL;
+    int size = 0;
+
+    assert(stringv);
+    assert(block_index >= 0 && block_index < stringv->block_total);
+    assert(n >= 0 && n < stringv->block_total);
+    assert(block_index - n >= 0);
+
+    start_address = addressof_nth_block(stringv, block_index);
+    if (n == 0) {
+        return start_address;
+    }
+
+    size = stringv->block_size * n;
+    memmove(start_address - size, start_address, size);
+    return start_address;
 }
