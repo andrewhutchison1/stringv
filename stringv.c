@@ -45,6 +45,15 @@ struct stringv *stringv_init(
     return stringv;
 }
 
+char const *stringv_get(struct stringv const *stringv, int n)
+{
+    if (!stringv || n < 0 || n >= stringv->string_count) {
+        return NULL;
+    }
+
+    return addressof_nth_string(stringv, n);
+}
+
 struct stringv *stringv_clear(struct stringv *stringv)
 {
     if (stringv) {
@@ -257,6 +266,10 @@ int copy_iterative(
     char *ith_string = NULL;
 
     for (; i < source->string_count; ++i) {
+        /* Since we don't know before hand whether the source strings will
+         * all fit in the destination stringv, we need to compute the length
+         * of each string, determine how many blocks it uses, and then check
+         * there are at least that many available blocks at each iteration. */
         ith_string = addressof_nth_string(source, i);
         ith_string_length = (int)strlen(ith_string);
         blocks_required = blocks_required_by(dest, ith_string_length);

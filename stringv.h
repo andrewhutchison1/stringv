@@ -39,6 +39,23 @@ struct stringv *stringv_init(
         int buf_size,
         int block_size);
 
+/* Retrieves the string at the nth position in the stringv. If any of the
+ * arguments are invalid or the index is out of range, the function will
+ * return NULL.
+ *
+ *      stringv     The stringv to read from.
+ *      n           The position, starting from 0, that determines which
+ *                  string we want to retrieve.
+ *      RETURNS     A non-writable pointer to the string indexed by n. If
+ *                  stringv is NULL or n is out of range, then the return
+ *                  value will be NULL.
+ *
+ *      PRE:        stringv != NULL
+ *                  0 <= n < stringv->string_count
+ *      POST:       stringv unchanged
+ */
+char const *stringv_get(struct stringv const *stringv, int n);
+
 /* Clears a stringv by zeroing the buffer and resetting the string count
  * and used block count. Returns its argument.
  *
