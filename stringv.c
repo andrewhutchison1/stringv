@@ -153,8 +153,6 @@ char const *stringv_push_front(
         char const *string,
         int length)
 {
-    int blocks_required = 0;
-
     /* FIXME: shift_blocks_backward is required for speculative insertion
      * functions that haven't been implemented yet. I write it concurrently
      * with shift_blocks_forward due to their similarity, but strict compiler
@@ -162,40 +160,7 @@ char const *stringv_push_front(
      * routines are implemented, this must stay. */
     (void)shift_blocks_backward;
 
-    if (!stringv || !string || length <= 0) {
-        return NULL;
-    }
-
-    /* If the stringv is empty, just do a push_back which doesn't involve
-     * any shifting. */
-    if (stringv->string_count == 0) {
-        return stringv_push_back(stringv, string, length);
-    }
-
-    blocks_required = blocks_required_by(stringv, length);
-    if (stringv->block_used + blocks_required > stringv->block_total) {
-        return NULL;
-    }
-
-    /* In push_back we would determine the block write address here, but it
-     * is fixed as zero as we are inserting to the beginning of the buffer.
-     * Instead, we need to shift the blocks forward as appropriate. The shift
-     * operation is guarunteed to succeed since we have just confirmed that
-     * there is sufficient space. Furthermore, we don't need to save the
-     * return address since we know it is simply stringv->buf */
-    shift_blocks_forward(stringv, 0, blocks_required);
-    memcpy(stringv->buf, string, length);
-
-    /* We need to zero out the remainder of the block(s) that were previously
-     * occupied and moved from */
-    memset(
-            stringv->buf + length,
-            0,
-            blocks_required * stringv->block_size - length);
-
-    stringv->block_used += blocks_required;
-    ++stringv->string_count;
-    return stringv->buf;
+    return stringv_insert(stringv, string, length, 0);
 }
 
 char const *stringv_insert(
@@ -215,8 +180,9 @@ char const *stringv_insert(
         return NULL;
     }
 
-    if ((stringv->string_count == 0 && index == 0)
-            || index == stringv->string_count) {
+    /* If the index is equal to the string count, then the insert is
+     * equivalent to an append */
+    if (index == stringv->string_count) {
         return stringv_push_back(stringv, string, length);
     }
 
