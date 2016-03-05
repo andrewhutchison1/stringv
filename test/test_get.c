@@ -6,10 +6,12 @@
 
 static int test_get_params_bad(void);
 static int test_get_params_good(void);
+static int test_get_unchanged(void);
 
 static const test_case tests[] = {
     TEST_CASE(test_get_params_bad),
-    TEST_CASE(test_get_params_good)
+    TEST_CASE(test_get_params_good),
+    TEST_CASE(test_get_unchanged)
 };
 
 int main(void)
@@ -40,4 +42,19 @@ int test_get_params_good(void)
 
     return stringv_get(&stringv, 0)
         && strcmp(stringv_get(&stringv, 0), "Hello") == 0;
+}
+
+int test_get_unchanged(void)
+{
+    struct stringv stringv = STRINGV_ZERO;
+    char buf[20] = {0};
+
+    assert(stringv_init(&stringv, buf, 20, 10));
+    assert(stringv_push_back(&stringv, "String", 6));
+    assert(stringv_get(&stringv, 0));
+
+    return stringv.block_size == 10
+        && stringv.block_used == 1
+        && stringv.string_count == 1
+        && stringv.block_total == 2;
 }
