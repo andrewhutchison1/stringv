@@ -5,7 +5,7 @@ LDFLAGS=
 OBJDIR=obj
 BINDIR=bin
 
-TESTS=test_init test_clear test_copy test_push_back
+TESTS=test_init test_clear test_copy test_push_back test_get
 TESTBIN=$(addprefix $(BINDIR)/,$(TESTS))
 TESTDEPS=$(addprefix $(OBJDIR)/,stringv.o test.o)
 
