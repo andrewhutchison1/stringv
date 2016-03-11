@@ -39,22 +39,29 @@ void dump_memory(char const *ptr, int size, int groupby)
 
     for (i = 0; i < size; ++i) {
         if (i && groupby && (i % groupby == 0)) {
-            putchar(' ');
+            fputc(' ', stderr);
         }
 
         if (ptr[i]) {
-            putchar(ptr[i]);
+            fputc(ptr[i], stderr);
         } else {
-            putchar('.');
+            fputc('.', stderr);
         }
     }
 
-    printf("\n");
+    fputc('\n', stderr);
 }
 
 void dump_stringv(struct stringv const *stringv)
 {
-    /* Assumes the stringv is valid */
+    assert(stringv);
+
+    fprintf(stderr,
+            "block_total %i\nblock_size %i\nblock_used %i\nstring_count %i\n",
+            stringv->block_total,
+            stringv->block_size,
+            stringv->block_used,
+            stringv->string_count);
     dump_memory(stringv->buf,
             stringv->block_total * stringv->block_size,
             stringv->block_size);
