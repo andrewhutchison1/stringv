@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "test.h"
 #include "../stringv.h"
