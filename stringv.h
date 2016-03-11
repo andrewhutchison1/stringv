@@ -9,6 +9,8 @@ struct stringv {
     int string_count;
 };
 
+typedef int string_pos;
+
 /* Initialises a stringv to an initial valid (but empty) state with the
  * given block size. If the function succeeds, a pointer to an initialised
  * stringv is returned. If the function fails, no external state is
@@ -177,6 +179,25 @@ char const *stringv_insert(
         struct stringv *stringv,
         char const *string,
         int length,
+        int index);
+
+/* Removes the string specified by the index argument from the stringv.
+ * Returns 1 on success or 0 on failure, occuring when the arguments are
+ * invalid or the index is out of range
+ *
+ *      stringv     The stringv to remove from.
+ *      index       The index of the string to remove. The index must be
+ *                  greater than or equal to zero and less than
+ *                  stringv->string_count.
+ *      RETURNS     1 on success, 0 on failure
+ *
+ *      PRE:        stringv != NULL
+ *                  index >= 0 && index < stringv->string_count
+ *      POST:       stringv->string_count decremented
+ *                  stringv->block_used decreased
+ */
+int stringv_remove(
+        struct stringv *stringv,
         int index);
 
 #endif /* STRINGV_H_ */
