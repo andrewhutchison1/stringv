@@ -3,34 +3,114 @@
 #include <assert.h>
 #include <string.h>
 
-static int blocks_required_by(
-        struct stringv const *stringv,
-        int string_length);
+typedef int block_pos;
+typedef char *block_ptr;
 
-static char *addressof_nth_block(struct stringv const *stringv, int n);
-static char *addressof_nth_string(struct stringv const *stringv, int n);
+#ifndef NDEBUG
 
-static int copy_bijective(
+/* Checks that a stringv is valid. */
+static int valid_stringv(
+        struct stringv const *s);
+
+/* Checks that a block_pos is valid, given the corresponding stringv. */
+static int valid_block_pos(
+        struct stringv const *s,
+        block_pos bn);
+
+/* Checks that a block_ptr is valid, given the corresponding stringv. This
+ * only really checks that the pointer is within the buffer of the stringv. */
+static int valid_block_ptr(
+        struct stringv const *s,
+        block_ptr bptr);
+
+#endif /* NDEBUG */
+
+/* Checks that a string_pos is valid, given the corresponding stringv. A
+ * string_pos is valid for *reads* if it is in the interval
+ * [0, s->string_count). However, a string_pos is valid for *writes* if it is
+ * in the interval [0, s->string_count]. */
+static int valid_string_pos(
+        struct stringv const *s,
+        string_pos sn,
+        int read);
+
+/* Given a string_pos, returns the corresponding block pos. */
+static block_pos string_pos_to_block_pos(
+        struct stringv const *s,
+        string_pos sn);
+
+/* Given a block_pos, returns the corresponding address of the start of that
+ * block. */
+static block_ptr block_pos_to_block_ptr(
+        struct stringv const *s,
+        block_pos bn);
+
+/* Returns a pointer to the string determined by the given string_pos. */
+static block_ptr string_pos_to_block_ptr(
+        struct stringv const *s,
+        string_pos sn);
+
+/* Clears the block range [first, last) by setting each block to binary zero.
+ * Returns first. */
+static block_pos clear_block_range(
+        struct stringv *s,
+        block_pos first,
+        block_pos last);
+
+/* Determines how many blocks would be required to store the given length
+ * of data (in chars; NOT including the NUL terminator) in the given
+ * stringv. */
+static int blocks_required(
+        struct stringv const *s,
+        int length);
+
+/* Copies blocks from a source stringv to a destination stringv assuming that
+ * source and destination have identical block sizes and destination has
+ * the same or a higher block total. Returns the number of strings copied
+ * (which is always equal to source->string_count) */
+static int copy_blockwise_bijective(
         struct stringv *dest,
         struct stringv const *source);
 
-static int copy_injective(
+/* Copies blocks from a source stringv to a destination stringv assuming that
+ * the source stringv has as many blocks as strings, and the destination
+ * stringv has the same or greater block size. Returns the number of strings
+ * copied (which is always equal to source->string_count) */
+static int copy_blockwise_injective(
         struct stringv *dest,
         struct stringv const *source);
 
-static int copy_iterative(
+/* Copies strings from a source stringv to a destination stringv. Returns the
+ * number of strings copied, which may be less than the source's string count
+ * depending on the destination stringv's block size and block total. */
+static int copy_stringwise(
         struct stringv *dest,
         struct stringv const *source);
 
-static char *shift_blocks_forward(
-        struct stringv *stringv,
-        int block_index,
-        int n);
+/* Shifts a range of blocks by the given offset. The offset may be negative
+ * (indicating a left shift) or positive (indicating a right shift). In the
+ * case of a right shift, the gap created is zeroed. Note that a right shift
+ * will leave the stringv in an undefined state (due to internal zero blocks)
+ * that must be resolved immediately by writing to this space. For a right
+ * shift, the block position of the start of the gap is returned. For a left
+ * shift, the block position of the end of the block range is returned. */
+static block_pos shift_blocks(
+        struct stringv *s,
+        block_pos first,
+        block_pos last,
+        int offset);
 
-static char *shift_blocks_backward(
-        struct stringv *stringv,
-        int block_index,
-        int n);
+/* Writes data to the given block position, returning a pointer to that same
+ * block. This function does no bounds checking, nor does it zero the remain-
+ * der of the block. Both of these conditions are assumed. */
+static block_ptr block_write(
+        struct stringv *s,
+        char const *string,
+        int length,
+        block_pos first,
+        block_pos last);
+
+/* Begin public functions ****************************************************/
 
 struct stringv *stringv_init(
         struct stringv *stringv,
@@ -46,30 +126,38 @@ struct stringv *stringv_init(
         return NULL;
     }
 
+    /* FIXME */
+    (void)valid_block_ptr;
+    (void)blocks_required;
+
     stringv->buf = buf;
     stringv->block_total = buf_size / block_size;
     stringv->block_size = block_size;
     stringv->block_used = stringv->string_count = 0;
-    memset(stringv->buf, 0, buf_size);
-
+    clear_block_range(stringv, 0, stringv->block_total);
+    
     return stringv;
 }
 
-char const *stringv_get(struct stringv const *stringv, int n)
+char const *stringv_get(
+        struct stringv const *stringv,
+        string_pos sn)
 {
-    if (!stringv || n < 0 || n >= stringv->string_count) {
+    if (!stringv || !valid_string_pos(stringv, sn, 1)) {
         return NULL;
     }
 
-    return addressof_nth_string(stringv, n);
+    assert(valid_stringv(stringv));
+    return string_pos_to_block_ptr(stringv, sn);
 }
 
-struct stringv *stringv_clear(struct stringv *stringv)
+struct stringv *stringv_clear(
+        struct stringv *stringv)
 {
     if (stringv) {
-        memset(stringv->buf, 0, stringv->block_total * stringv->block_size);
-        stringv->block_used = 0;
-        stringv->string_count = 0;
+        assert(valid_stringv(stringv));
+        clear_block_range(stringv, 0, stringv->block_total);
+        stringv->block_used = stringv->string_count = 0;
     }
 
     return stringv;
@@ -83,69 +171,70 @@ int stringv_copy(
         return 0;
     }
 
-    /* Clear the destination stringv */
-    (void)stringv_clear(dest);
+    assert(valid_stringv(dest));
+    assert(valid_stringv(source));
 
-    /* If the source stringv is empty, don't do anything. This is done after
-     * stringv_clear because clearing the destination stringv may be a side
-     * effect that is relied upon */
+    /* The destination needs to be cleared. */
+    stringv_clear(dest);
+
+    /* If the source stringv is empty, than we don't need to do anything. */
     if (source->string_count == 0) {
         return 0;
     }
 
     /* If the destination stringv has the same block size, then we can just
-     * memcpy the entire block over. It also needs to have the same or a
-     * greater block total. */
+     * memcpy the entire block over if it also has a greater than or equal
+     * block total. */
     if (dest->block_size == source->block_size
             && dest->block_total >= source->block_used) {
-        return copy_bijective(dest, source);
+        return copy_blockwise_bijective(dest, source);
     }
 
-    /* If the destination stringv has a block size greater than or equal to
-     * the source's block size, each source string fits in a single
-     * source block, and there are at least as many total destination blocks
-     * as there are used source blocks, then we don't need to compute the
-     * length of each string before copying it into the destination */
+    /* If the destination stringv has a block size greater than or equal to the
+     * source's block size, each source string fits in a single source block,
+     * and there are at least as many total destination blocks as there are
+     * used source blocks, then we don't need to compute the length of each
+     * string before copying, as we know all strings will fit. */
     if (dest->block_size >= source->block_size
             && source->block_used == source->string_count
             && dest->block_total >= source->block_used) {
-        return copy_injective(dest, source);
+        return copy_blockwise_injective(dest, source);
     }
 
-    /* We can't optimise the copy operation, so just do it iteratively. */
-    return copy_iterative(dest, source);
+    return copy_stringwise(dest, source);
 }
+
 
 char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
         int length)
 {
-    int blocks_required = 0;
-    char *block_address = NULL;
+    int blocks_req = 0;
 
     if (!stringv || !string || length <= 0) {
         return NULL;
     }
 
-    /* Determine how many blocks are required by the string in this
-     * current stringv */
-    blocks_required = blocks_required_by(stringv, length);
+    assert(valid_stringv(stringv));
 
-    /* Ensure that there are sufficient blocks to store the string */
-    if (stringv->block_used + blocks_required > stringv->block_total) {
+    /* push_back can't be implemented in terms of insert because insert defers
+     * to push_back as a special case. Indeed, push_back is far simpler to
+     * implement than insert with the only common code being the block
+     * capacity check. */
+    blocks_req = blocks_required(stringv, length);
+    if (stringv->block_used + blocks_req > stringv->block_total) {
         return NULL;
     }
 
-    block_address = addressof_nth_block(stringv, stringv->block_used);
-    memcpy(
-            block_address,
+    /* If there is enough room, all we need to do is write to the end of the
+     * stringv and bump the string and block counts as appropriate. */
+    return block_write(
+            stringv,
             string,
-            length);
-
-    stringv->block_used += blocks_required;
-    ++stringv->string_count;
-    return block_address;
+            length,
+            stringv->block_used,
+            stringv->block_used + blocks_req);
 }
 
 char const *stringv_push_front(
@@ -153,13 +242,6 @@ char const *stringv_push_front(
         char const *string,
         int length)
 {
-    /* FIXME: shift_blocks_backward is required for speculative insertion
-     * functions that haven't been implemented yet. I write it concurrently
-     * with shift_blocks_forward due to their similarity, but strict compiler
-     * warnings will flag it as an unused function. So until those insertion
-     * routines are implemented, this must stay. */
-    (void)shift_blocks_backward;
-
     return stringv_insert(stringv, string, length, 0);
 }
 
@@ -167,245 +249,307 @@ char const *stringv_insert(
         struct stringv *stringv,
         char const *string,
         int length,
-        int index)
+        string_pos sn)
 {
-    char *dest = NULL;
-    int blocks_required = 0;
+    int blocks_req = 0;
+    block_pos write_pos = 0;
 
     if (!stringv
             || !string
-            || length < 0
-            || index < 0
-            || index > stringv->string_count) {
+            || length <= 0
+            || !valid_string_pos(stringv, sn, 0)) {
         return NULL;
     }
 
-    /* If the index is equal to the string count, then the insert is
-     * equivalent to an append */
-    if (index == stringv->string_count) {
+    assert(valid_stringv(stringv));
+
+    /* An insertion at the end of the stringv is equivalent to a push_back.
+     * This also handles insertions into an empty stringv */
+    if (sn == stringv->string_count) {
         return stringv_push_back(stringv, string, length);
     }
 
-    blocks_required = blocks_required_by(stringv, length);
-    if (stringv->block_used + blocks_required > stringv->block_total) {
+    /* Ensure there is sufficient room in the stringv */
+    blocks_req = blocks_required(stringv, length);
+    if (stringv->block_used + blocks_req > stringv->block_total) {
         return NULL;
     }
 
-    dest = shift_blocks_forward(stringv, index, blocks_required);
-    memcpy(dest, string, length);
+    assert(blocks_req != 0);
 
-    memset(
-            dest + length,
+    /* We know that the insertion is occurring internally, so we will need
+     * to shift blocks *right* to accomodate this. We also know that there
+     * is sufficient space to do so. */
+    write_pos = shift_blocks(
+            stringv,
+            string_pos_to_block_pos(stringv, sn),
+            stringv->block_used,
+            blocks_req);
+
+    return block_write(
+            stringv,
+            string,
+            length,
+            write_pos,
+            write_pos + blocks_req);
+}
+
+/* End public functions ******************************************************/
+
+#ifndef NDEBUG
+
+int valid_stringv(
+        struct stringv const *s)
+{
+    return s
+        && s->buf
+        && s->block_total > 0
+        && s->block_size > 0
+        && s->block_used >= 0 && s->block_used <= s->block_total
+        && s->string_count >= 0 && s->string_count <= s->block_total;
+}
+
+int valid_block_pos(
+        struct stringv const *s,
+        block_pos bn)
+{
+    /* A block pos is valid if it is in the interval [0, s->block_total]. The
+     * right end of the interval includes the block total since block positions
+     * can be used as ranges, and we want to allow one-past-the-end positions
+     * to make range arithmetic simpler. */
+    return  bn >= 0 && bn <= s->block_total;
+}
+
+int valid_block_ptr(
+        struct stringv const *s,
+        block_ptr bptr)
+{
+    return bptr >= s->buf
+        && bptr < (s->buf + s->block_size * (s->block_total - 1));
+}
+
+#endif /* NDEBUG */
+
+int valid_string_pos(
+        struct stringv const *s,
+        string_pos sn,
+        int read)
+{
+    return sn >= 0 && (read ? sn < s->string_count : sn <= s->string_count);
+}
+
+block_pos string_pos_to_block_pos(
+        struct stringv const *s,
+        string_pos sn)
+{
+    block_pos i = 0;
+
+    assert(s && valid_stringv(s));
+    assert(valid_string_pos(s, sn, 1));
+
+    /* The first string always starts at the start of the stringv's buffer. */
+    if (sn == 0) {
+        return 0;
+    }
+
+    /* If the stringv's string count is equal to the number of used blocks,
+     * then the block position corresponding to any string position is simply
+     * that string position. */
+    if (s->string_count == s->block_used) {
+        return sn;
+    }
+
+    /* Otherwise, we need to iterate through each block in the stringv, and
+     * check that the character immediately preceding the start of each block
+     * is NUL. If so, then the start of that block also starts a string. */
+    for (i = 0; sn > 0 && i < s->block_total; ++i) {
+        /* If the preceding is NUL, we found a string. */
+        if (!s->buf[(i + 1) * s->block_size - 1]) {
+            --sn;
+        }
+    }
+
+    assert(sn == 0);
+    return i;
+}
+
+block_ptr block_pos_to_block_ptr(
+        struct stringv const *s,
+        block_pos bn)
+{
+    assert(s && valid_stringv(s));
+    assert(valid_block_pos(s, bn));
+    return s->buf + bn * s->block_size;
+}
+
+block_ptr string_pos_to_block_ptr(
+        struct stringv const *s,
+        string_pos sn)
+{
+    return block_pos_to_block_ptr(
+            s,
+            string_pos_to_block_pos(s, sn));
+}
+
+block_pos clear_block_range(
+        struct stringv *s,
+        block_pos first,
+        block_pos last)
+{
+    assert(s && valid_stringv(s));
+    assert(valid_block_pos(s, first));
+    assert(valid_block_pos(s, last) || last == s->block_total);
+
+    memset(block_pos_to_block_ptr(s, first),
             0,
-            blocks_required * stringv->block_size - length);
+            (last - first) * s->block_size);
 
-    stringv->block_used += blocks_required;
-    ++stringv->string_count;
-    return dest;
+    return first;
 }
 
-int blocks_required_by(
-        struct stringv const *stringv,
-        int string_length)
+int blocks_required(
+        struct stringv const *s,
+        int length)
 {
-    assert(stringv);
-    assert(string_length > 0);
-    assert(stringv->block_size > 0);
+    assert(s && valid_stringv(s));
+    assert(length > 0);
 
-    /* For the NUL char */
-    ++string_length;
+    /* Increment the length to accomodate the NUL character. All strings
+     * in a stringv are NUL terminated (with at least one NUL terminator, 
+     * by design. */
+    ++length;
 
-    /* Round up the required blocks */
-    return (string_length / stringv->block_size) +
-        (string_length % stringv->block_size != 0);
+    return (length / s->block_size) + (length % s->block_size != 0);
 }
 
-char *addressof_nth_block(struct stringv const *stringv, int n)
-{
-    assert(stringv);
-    assert(n >= 0);
-    assert(n < stringv->block_total);
-    return stringv->buf + n * stringv->block_size;
-}
-
-char *addressof_nth_string(struct stringv const *stringv, int n)
-{
-    int i = 0, last_nul = 0;
-
-    assert(stringv);
-    assert(n >= 0);
-    assert(n < stringv->string_count);
-
-    /* The first string always starts at the start of the stringv's buffer */
-    if (n == 0) {
-        return stringv->buf;
-    }
-
-    /* We can perform an optimisation here if the stringv's string count is
-     * equal to the number of used blocks (ie. there is a bijection
-     * between string addresses and block addresses). Since an arbitrary
-     * block address can be determined in constant time, we can defer to
-     * addressof_nth_block instead with the same result. */
-    if (stringv->string_count == stringv->block_used) {
-        return addressof_nth_block(stringv, n);
-    }
-
-    /* Otherwise, we need to iterate through the buffer in steps of
-     * block_size, starting from block_size - 1. If the char at
-     * this location is NUL, the next char is the start of the nth block */
-    last_nul = stringv->block_total * stringv->block_size - 1;
-    for (i = stringv->block_size - 1;
-            i != last_nul;
-            i += stringv->block_size)
-    {
-        /* Landing on a NUL character means that the next character starts
-         * a block. So we decrement the block index to signify a block
-         * being encountered */
-        if (!stringv->buf[i]) {
-            --n;
-        }
-
-        /* When n is zero, we are are the desired block index. The next
-         * character would be the start character of the desired block */
-        if (n == 0) {
-            break;
-        }
-    }
-
-    assert(n == 0);
-    return stringv->buf + i + 1;
-}
-
-int copy_bijective(
+int copy_blockwise_bijective(
         struct stringv *dest,
         struct stringv const *source)
 {
-    assert(dest);
-    assert(source);
+    assert(dest && valid_stringv(dest));
+    assert(source && valid_stringv(source));
     assert(source->block_size == dest->block_size);
     assert(source->block_used <= dest->block_total);
 
     memcpy(dest->buf, source->buf, source->block_size * source->block_used);
     dest->string_count = source->string_count;
     dest->block_used = source->block_used;
-    return source->string_count;
+    return dest->string_count;
 }
 
-int copy_injective(
+int copy_blockwise_injective(
         struct stringv *dest,
         struct stringv const *source)
 {
-    int i = 0;
+    string_pos i = 0;
 
-    assert(dest);
-    assert(source);
-    assert(source->block_size <= dest->block_size);
+    assert(dest && valid_stringv(dest));
+    assert(source && valid_stringv(source));
     assert(source->block_used == source->string_count);
+    assert(source->block_size <= dest->block_size);
 
-    for (; i < source->string_count; ++i) {
-        /* Copy the ith string in the source stringv to the nth block
-         * in the destination stringv. Since we *know* that each string
-         * in the source stringv occupies exactly one block in both the
-         * source and destination stringv, we copy source->block_size - 1
-         * chars instead of computing the length of each string at each
-         * iteration. NUL termination is acheived for free since the copy
-         * operation clears the dest stringv. */
+    for (i = 0; i < source->string_count; ++i) {
+        /* We know that each string in the source stringv occupies exactly
+         * one block in the destination stringv. So we copy each string
+         * over to each block. Instead of computing the strings length with
+         * strlen, we just copy source->block_size - 1 characters since the
+         * string lengths are bounded by this value. */
         memcpy(
-                addressof_nth_block(dest, dest->block_used),
-                addressof_nth_string(source, i),
+                block_pos_to_block_ptr(dest, i),
+                block_pos_to_block_ptr(source, i),
                 source->block_size - 1);
-
-        /* All strings occupy one block */
-        ++dest->block_used;
-        ++dest->string_count;
     }
 
-    /* This function always copies all strings */
-    return source->string_count;
+    dest->string_count = dest->block_used = source->string_count;
+    return dest->string_count;
 }
 
-int copy_iterative(
+int copy_stringwise(
         struct stringv *dest,
         struct stringv const *source)
 {
-    int i = 0, ith_string_length = 0, blocks_required = 0, strings_copied = 0;
-    char *ith_string = NULL;
+    string_pos i = 0;
+    int ith_length = 0, blocks_req = 0;
+    char const *ith_string = NULL;
 
-    assert(dest);
-    assert(source);
+    assert(dest && valid_stringv(dest));
+    assert(source && valid_stringv(source));
 
-    for (; i < source->string_count; ++i) {
-        /* Since we don't know before hand whether the source strings will
-         * all fit in the destination stringv, we need to compute the length
-         * of each string, determine how many blocks it uses, and then check
-         * there are at least that many available blocks at each iteration. */
-        ith_string = addressof_nth_string(source, i);
-        ith_string_length = (int)strlen(ith_string);
-        blocks_required = blocks_required_by(dest, ith_string_length);
+    for (i = 0; i < source->string_count; ++i) {
+        /* We don't know whether the source string will fit in the destination
+         * stringv, so we need to compute the length of each string,
+         * determine how many blocks it uses, and bail out if the required
+         * number of blocks is greater than the available blocks in dest. */
+        ith_string = string_pos_to_block_ptr(source, i);
+        ith_length = (int)strlen(ith_string);
+        blocks_req = blocks_required(dest, ith_length);
 
         /* If there is insufficient room, stop copying */
-        if (dest->block_used + blocks_required > dest->block_total) {
-            break;
-        }
+        if (dest->block_used + blocks_req > dest->block_total) { break; }
 
         /* Otherwise, copy the string over */
         memcpy(
-                addressof_nth_block(dest, dest->block_used),
+                block_pos_to_block_ptr(dest, dest->block_used),
                 ith_string,
-                ith_string_length);
+                ith_length);
 
-        dest->block_used += blocks_required;
+        /* And increment the string and block counters */
+        dest->block_used += blocks_req;
         ++dest->string_count;
-        ++strings_copied;
     }
 
-    return strings_copied;
+    return dest->string_count;
 }
 
-static char *shift_blocks_forward(
-        struct stringv *stringv,
-        int block_index,
-        int n)
+block_pos shift_blocks(
+        struct stringv *s,
+        block_pos first,
+        block_pos last,
+        int offset)
 {
-    char *source = NULL, *dest = NULL;
-    int size = 0;
+    assert(s && valid_stringv(s));
+    assert(valid_block_pos(s, first));
+    assert(valid_block_pos(s, last));
+    assert(last > first);
+    assert(offset != 0);
 
-    assert(stringv);
-    assert(block_index >= 0);
-    assert(block_index < stringv->block_used);
-    assert(n >= 0);
-    assert(n < stringv->block_total);
+    memmove(
+            block_pos_to_block_ptr(s, first + offset),
+            block_pos_to_block_ptr(s, first),
+            (last - first) * s->block_size);
 
-    source = addressof_nth_block(stringv, block_index);
-    if (n == 0) {
-        return source;
+    if (offset < 0) {
+        /* If the offset is negative, then the shift is a left shift.
+         * We return the block position of the end of the shifted range. */
+        return last + offset;
+    } else {
+        /* Otherwise, the offset is positive and the shift is a right shift.
+         * We return the block position of the start of the gap that we just
+         * created from the shift after zeroing it out. */
+        clear_block_range(s, first, first + offset);
+        return first;
     }
-
-    dest = source + n * stringv->block_size;
-    size = (stringv->block_used - block_index) * stringv->block_size;
-    memmove(dest, source, size);
-    return source;
 }
 
-static char *shift_blocks_backward(
-        struct stringv *stringv,
-        int block_index,
-        int n)
+block_ptr block_write(
+        struct stringv *s,
+        char const *string,
+        int length,
+        block_pos first,
+        block_pos last)
 {
-    char *start_address = NULL;
-    int size = 0;
+    block_ptr write_ptr = NULL;
 
-    assert(stringv);
-    assert(block_index >= 0 && block_index < stringv->block_total);
-    assert(n >= 0 && n < stringv->block_total);
-    assert(block_index - n >= 0);
+    assert(s && valid_stringv(s));
+    assert(string);
+    assert(length > 0);
+    assert(valid_block_pos(s, first));
+    assert(valid_block_pos(s, last));
+    assert(last > first);
 
-    start_address = addressof_nth_block(stringv, block_index);
-    if (n == 0) {
-        return start_address;
-    }
+    write_ptr = memcpy(block_pos_to_block_ptr(s, first), string, length);
+    s->block_used += (last - first);
+    ++s->string_count;
 
-    size = stringv->block_size * n;
-    memmove(start_address - size, start_address, size);
-    return start_address;
+    return write_ptr;
 }
