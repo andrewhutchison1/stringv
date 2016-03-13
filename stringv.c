@@ -17,12 +17,6 @@ static int valid_block_pos(
         struct stringv const *s,
         block_pos bn);
 
-/* Checks that a block_ptr is valid, given the corresponding stringv. This
- * only really checks that the pointer is within the buffer of the stringv. */
-static int valid_block_ptr(
-        struct stringv const *s,
-        block_ptr bptr);
-
 #endif /* NDEBUG */
 
 /* Checks that a string_pos is valid, given the corresponding stringv. A
@@ -63,6 +57,19 @@ static block_pos clear_block_range(
 static int blocks_required(
         struct stringv const *s,
         int length);
+
+/* Determines if a given block is terminal. A block is terminal if it is
+ * terminated with one or more NUL characters. Terminal blocks end multi-
+ * block strings. */
+static int is_block_terminal(
+        struct stringv const *s,
+        block_pos bn);
+
+/* Determines how many blocks are used by the string located at the given
+ * string_pos. */
+static int blocks_used_by(
+        struct stringv const *s,
+        string_pos sn);
 
 /* Copies blocks from a source stringv to a destination stringv assuming that
  * source and destination have identical block sizes and destination has
@@ -110,8 +117,6 @@ static block_ptr block_write(
         block_pos first,
         block_pos last);
 
-/* Begin public functions ****************************************************/
-
 struct stringv *stringv_init(
         struct stringv *stringv,
         char *buf,
@@ -125,10 +130,6 @@ struct stringv *stringv_init(
             || block_size > buf_size) {
         return NULL;
     }
-
-    /* FIXME */
-    (void)valid_block_ptr;
-    (void)blocks_required;
 
     stringv->buf = buf;
     stringv->block_total = buf_size / block_size;
@@ -294,7 +295,59 @@ char const *stringv_insert(
             write_pos + blocks_req);
 }
 
-/* End public functions ******************************************************/
+int stringv_remove(
+        struct stringv *stringv,
+        string_pos sn)
+{
+    block_pos bn = 0;
+    int offset = 0;
+
+    if (!stringv
+            || !valid_string_pos(stringv, sn, 1)
+            || stringv->string_count == 0) {
+        return 0;
+    }
+
+    /* If there is only one string in the stringv, then it is the one specified
+     * by sn since the string pos is valid for reads. So clear the stringv. */
+    if (stringv->string_count == 1) {
+       (void)stringv_clear(stringv);
+       return 1;
+    }
+
+    bn = string_pos_to_block_pos(stringv, sn);
+    assert(valid_block_pos(stringv, bn));
+
+    /* Otherwise, if the string position refers to the string at the end of the
+     * stringv, then we can rewind the stringv's block_used field and clear
+     * the end of the buffer. This way we avoid shifting blocks. */
+    if (sn == stringv->string_count - 1) {
+        /* Clear the last string. clear_block_range returns bn, which
+         * will be the number of used blocks in the stringv after the last
+         * string is removed. */
+        stringv->block_used = clear_block_range(
+                stringv,
+                bn,
+                stringv->block_used);
+
+        --stringv->string_count;
+        return 1;
+    }
+
+    /* Finally, if the insertion is internal (there are strings to the right
+     * of the string we want to remove) then we can shift the blocks over the
+     * string to be removed. We first compute the shift offset, which is the
+     * number of blocks used by the string to remove. */
+    offset = blocks_used_by(stringv, sn);
+    clear_block_range(
+            stringv,
+            shift_blocks(stringv, bn + offset, stringv->block_used, -offset),
+            stringv->block_used);
+
+    --stringv->string_count;
+    stringv->block_used -= offset;
+    return 1;
+}
 
 #ifndef NDEBUG
 
@@ -320,14 +373,6 @@ int valid_block_pos(
     return  bn >= 0 && bn <= s->block_total;
 }
 
-int valid_block_ptr(
-        struct stringv const *s,
-        block_ptr bptr)
-{
-    return bptr >= s->buf
-        && bptr < (s->buf + s->block_size * (s->block_total - 1));
-}
-
 #endif /* NDEBUG */
 
 int valid_string_pos(
@@ -342,10 +387,10 @@ block_pos string_pos_to_block_pos(
         struct stringv const *s,
         string_pos sn)
 {
-    block_pos i = 0;
+    block_pos bn = 0;
 
     assert(s && valid_stringv(s));
-    assert(valid_string_pos(s, sn, 1));
+    assert(valid_string_pos(s, sn, 0));
 
     /* The first string always starts at the start of the stringv's buffer. */
     if (sn == 0) {
@@ -359,18 +404,15 @@ block_pos string_pos_to_block_pos(
         return sn;
     }
 
-    /* Otherwise, we need to iterate through each block in the stringv, and
-     * check that the character immediately preceding the start of each block
-     * is NUL. If so, then the start of that block also starts a string. */
-    for (i = 0; sn > 0 && i < s->block_total; ++i) {
-        /* If the preceding is NUL, we found a string. */
-        if (!s->buf[(i + 1) * s->block_size - 1]) {
+    while (sn > 0) {
+        if (is_block_terminal(s, bn)) {
             --sn;
         }
+        ++bn;
     }
 
     assert(sn == 0);
-    return i;
+    return bn;
 }
 
 block_ptr block_pos_to_block_ptr(
@@ -420,6 +462,41 @@ int blocks_required(
     ++length;
 
     return (length / s->block_size) + (length % s->block_size != 0);
+}
+
+int is_block_terminal(
+        struct stringv const *s,
+        block_pos bn)
+{
+    assert(s && valid_stringv(s));
+    assert(valid_block_pos(s, bn));
+    return *(block_pos_to_block_ptr(s, bn) + s->block_size - 1) == '\0';
+}
+
+int blocks_used_by(
+        struct stringv const *s,
+        string_pos sn)
+{
+    block_pos bn = 0;
+    int i = 0;
+
+    assert(s && valid_stringv(s));
+    assert(valid_string_pos(s, sn, 1));
+
+    /* If the stringv has the same number of strings as it does blocks,
+     * then all strings necessarily occupy a single block */
+    if (s->string_count == s->block_used) {
+        return 1;
+    }
+
+    /* Otherwise, we iterate through the blocks until we find a terminal block.
+     * This (by definition) ends the string). */
+    bn = string_pos_to_block_pos(s, sn);
+    while (!is_block_terminal(s, bn + i)) {
+        ++i;
+    }
+
+    return i;
 }
 
 int copy_blockwise_bijective(

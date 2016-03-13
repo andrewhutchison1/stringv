@@ -186,9 +186,7 @@ char const *stringv_insert(
  * invalid or the index is out of range
  *
  *      stringv     The stringv to remove from.
- *      index       The index of the string to remove. The index must be
- *                  greater than or equal to zero and less than
- *                  stringv->string_count.
+ *      sn          The position of the string to remove
  *      RETURNS     1 on success, 0 on failure
  *
  *      PRE:        stringv != NULL
@@ -198,6 +196,6 @@ char const *stringv_insert(
  */
 int stringv_remove(
         struct stringv *stringv,
-        int index);
+        string_pos sn);
 
 #endif /* STRINGV_H_ */
