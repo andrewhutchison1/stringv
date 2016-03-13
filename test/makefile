@@ -6,7 +6,7 @@ OBJDIR=obj
 BINDIR=bin
 
 TESTS=test_init test_clear test_copy test_push_back test_push_front \
-	  test_get test_insert
+	  test_get test_insert test_remove
 TESTBIN=$(addprefix $(BINDIR)/,$(TESTS))
 TESTDEPS=$(addprefix $(OBJDIR)/,stringv.o test.o)
 
