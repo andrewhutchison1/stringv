@@ -25,6 +25,8 @@ struct stringv {
     int string_count;
 };
 
+/* The string_pos is an integral quantity that determines (uniquely) a
+ * specific string inside a stringv. */
 typedef int string_pos;
 
 /* Initialises a stringv to an initial valid (but empty) state with the

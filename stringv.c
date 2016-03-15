@@ -13,6 +13,11 @@ typedef char *block_ptr;
  */
 #define UNUSED_FUNCTION(f) ((void)(f))
 
+/* The following functions are only called in assert expressions. If NDEBUG
+ * is defined, the asserts compile to no-ops but the declarations (and
+ * definitions) of these functions would remain. This may cause strict
+ * compiles to issue a warning for an unused function. This way, these
+ * functions are only present when the corresponding asserts are. */
 #ifndef NDEBUG
 
 /* Checks that a stringv is valid. */
@@ -29,7 +34,9 @@ static int valid_block_pos(
 /* Checks that a string_pos is valid, given the corresponding stringv. A
  * string_pos is valid for *reads* if it is in the interval
  * [0, s->string_count). However, a string_pos is valid for *writes* if it is
- * in the interval [0, s->string_count]. */
+ * in the interval [0, s->string_count], since a write at the
+ * (s->string_count)th position is equivalent to (and treated as) a push back.
+ */
 static int valid_string_pos(
         struct stringv const *s,
         string_pos sn,
@@ -81,7 +88,7 @@ static int blocks_used_by(
 /* Copies blocks from a source stringv to a destination stringv assuming that
  * source and destination have identical block sizes and destination has
  * the same or a higher block total. Returns the number of strings copied
- * (which is always equal to source->string_count) */
+ * (which is always equal to source->string_count). */
 static int copy_blockwise_bijective(
         struct stringv *STRINGV_RESTRICT dest,
         struct stringv const *STRINGV_RESTRICT source);
@@ -89,7 +96,7 @@ static int copy_blockwise_bijective(
 /* Copies blocks from a source stringv to a destination stringv assuming that
  * the source stringv has as many blocks as strings, and the destination
  * stringv has the same or greater block size. Returns the number of strings
- * copied (which is always equal to source->string_count) */
+ * copied (which is always equal to source->string_count). */
 static int copy_blockwise_injective(
         struct stringv *STRINGV_RESTRICT dest,
         struct stringv const *STRINGV_RESTRICT source);
@@ -494,7 +501,7 @@ int blocks_used_by(
     assert(s && valid_stringv(s));
     assert(valid_string_pos(s, sn, 1));
 
-    /* If the stringv has the same number of strings as it does blocks,
+    /* If the stringv has the same number of strings as it does used blocks,
      * then all strings necessarily occupy a single block */
     if (s->string_count == s->block_used) {
         return 1;
@@ -573,7 +580,9 @@ int copy_stringwise(
         blocks_req = blocks_required(dest, ith_length);
 
         /* If there is insufficient room, stop copying */
-        if (dest->block_used + blocks_req > dest->block_total) { break; }
+        if (dest->block_used + blocks_req > dest->block_total) {
+            break;
+        }
 
         /* Otherwise, copy the string over */
         memcpy(
