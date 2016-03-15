@@ -9,7 +9,7 @@ typedef char *block_ptr;
  * translation unit. For compiles with strict warnings, the compiler will
  * complain that the functions stringv_begin, stringv_end and stringv_next are
  * unused. So we can use this macro to trick the compiler front-end into
- * thinking the functions are unused but in actuality they compile to a no-op.
+ * thinking the functions are used but in actuality they compile to a no-op.
  */
 #define UNUSED_FUNCTION(f) ((void)(f))
 

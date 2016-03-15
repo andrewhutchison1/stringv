@@ -217,6 +217,7 @@ int stringv_remove(
         struct stringv *stringv,
         string_pos sn);
 
+/* TODO documentation */
 static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_begin(
         struct stringv const *STRINGV_RESTRICT stringv)
 {
@@ -224,6 +225,7 @@ static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_begin(
     return stringv->buf;
 }
 
+/* TODO documentation */
 static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_end(
         struct stringv const *STRINGV_RESTRICT stringv)
 {
@@ -231,6 +233,7 @@ static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_end(
     return stringv->buf + (stringv->block_size * stringv->block_used);
 }
 
+/* TODO documentation */
 static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_next(
         struct stringv const *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT iter)
