@@ -1,6 +1,22 @@
 #ifndef STRINGV_H_
 #define STRINGV_H_
 
+#include <assert.h>
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* defined(__cplusplus) */
+
+#if defined(__STDC__)
+#   if defined(__STD_VERSION__) && __STD_VERSION__ >= 199901L
+#       define STRINGV_RESTRICT restrict
+#       define STRINGV_INLINE inline
+#   else
+#       define STRINGV_RESTRICT /* Nothing */
+#       define STRINGV_INLINE /* Nothing */
+#   endif
+#endif /* defined(__STDC__) */
+
 struct stringv {
     char *buf;
     int block_total;
@@ -43,7 +59,9 @@ struct stringv *stringv_init(
 
 /* Retrieves the string at the nth position in the stringv. If any of the
  * arguments are invalid or the index is out of range, the function will
- * return NULL.
+ * return NULL. stringv_get can be used to iterate, but it is inefficient
+ * since stringv_get must count blocks from the beginning each time. For
+ * iteration, use stringv_begin/stringv_next/stringv_end.
  *
  *      stringv     The stringv to read from.
  *      n           The position, starting from 0, that determines which
@@ -87,13 +105,14 @@ struct stringv *stringv_clear(struct stringv *stringv);
  *
  *      PRE:        dest != NULL
  *                  source != NULL
+ *                  dest != source
  *      POST:       source unchanged
  *                  dest->block_size unchanged
  *                  dest->string_count <= source->string_count
  */
 int stringv_copy(
-        struct stringv *dest,
-        struct stringv const *source);
+        struct stringv *STRINGV_RESTRICT dest,
+        struct stringv const *STRINGV_RESTRICT source);
 
 /* Appends a string to the stringv, returning a pointer to its location,
  * or NULL on error. The index of the appended string can be recovered
@@ -122,8 +141,8 @@ int stringv_copy(
  *                  return pointer == &(stringv->string_count - 1)th string
  */
 char const *stringv_push_back(
-        struct stringv *stringv,
-        char const *string,
+        struct stringv *STRINGV_RESTRICT stringv,
+        char const *STRINGV_RESTRICT string,
         int length);
 
 /* Prepends a string to the stringv, returning a pointer to its location, or
@@ -150,8 +169,8 @@ char const *stringv_push_back(
  *                  return pointer == &(0th string) == &stringv->buf[0]
  */
 char const *stringv_push_front(
-        struct stringv *stringv,
-        char const *string,
+        struct stringv *STRINGV_RESTRICT stringv,
+        char const *STRINGV_RESTRICT string,
         int length);
 
 /* Inserts a string at the specified string index, returning a pointer to it,
@@ -176,8 +195,8 @@ char const *stringv_push_front(
  *      POST:       stringv_get(stringv, index) == string
  */
 char const *stringv_insert(
-        struct stringv *stringv,
-        char const *string,
+        struct stringv *STRINGV_RESTRICT stringv,
+        char const *STRINGV_RESTRICT string,
         int length,
         int index);
 
@@ -197,5 +216,37 @@ char const *stringv_insert(
 int stringv_remove(
         struct stringv *stringv,
         string_pos sn);
+
+static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_begin(
+        struct stringv const *STRINGV_RESTRICT stringv)
+{
+    assert(stringv);
+    return stringv->buf;
+}
+
+static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_end(
+        struct stringv const *STRINGV_RESTRICT stringv)
+{
+    assert(stringv);
+    return stringv->buf + (stringv->block_size * stringv->block_used);
+}
+
+static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_next(
+        struct stringv const *STRINGV_RESTRICT stringv,
+        char const *STRINGV_RESTRICT iter)
+{
+    assert(stringv);
+    assert(iter);
+
+    do {
+        iter += stringv->block_size;
+    } while (*(iter - 1) != '\0');
+
+    return iter;
+}
+
+#if defined(__cplusplus)
+}
+#endif /* defined(__cplusplus) */
 
 #endif /* STRINGV_H_ */

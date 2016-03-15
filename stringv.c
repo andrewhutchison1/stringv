@@ -1,10 +1,17 @@
 #include "stringv.h"
 
-#include <assert.h>
 #include <string.h>
 
 typedef int block_pos;
 typedef char *block_ptr;
+
+/* The iteration functions are defined in stringv.h but are not used in this
+ * translation unit. For compiles with strict warnings, the compiler will
+ * complain that the functions stringv_begin, stringv_end and stringv_next are
+ * unused. So we can use this macro to trick the compiler front-end into
+ * thinking the functions are unused but in actuality they compile to a no-op.
+ */
+#define UNUSED_FUNCTION(f) ((void)(f))
 
 #ifndef NDEBUG
 
@@ -76,23 +83,23 @@ static int blocks_used_by(
  * the same or a higher block total. Returns the number of strings copied
  * (which is always equal to source->string_count) */
 static int copy_blockwise_bijective(
-        struct stringv *dest,
-        struct stringv const *source);
+        struct stringv *STRINGV_RESTRICT dest,
+        struct stringv const *STRINGV_RESTRICT source);
 
 /* Copies blocks from a source stringv to a destination stringv assuming that
  * the source stringv has as many blocks as strings, and the destination
  * stringv has the same or greater block size. Returns the number of strings
  * copied (which is always equal to source->string_count) */
 static int copy_blockwise_injective(
-        struct stringv *dest,
-        struct stringv const *source);
+        struct stringv *STRINGV_RESTRICT dest,
+        struct stringv const *STRINGV_RESTRICT source);
 
 /* Copies strings from a source stringv to a destination stringv. Returns the
  * number of strings copied, which may be less than the source's string count
  * depending on the destination stringv's block size and block total. */
 static int copy_stringwise(
-        struct stringv *dest,
-        struct stringv const *source);
+        struct stringv *STRINGV_RESTRICT dest,
+        struct stringv const *STRINGV_RESTRICT source);
 
 /* Shifts a range of blocks by the given offset. The offset may be negative
  * (indicating a left shift) or positive (indicating a right shift). In the
@@ -111,8 +118,8 @@ static block_pos shift_blocks(
  * block. This function does no bounds checking, nor does it zero the remain-
  * der of the block. Both of these conditions are assumed. */
 static block_ptr block_write(
-        struct stringv *s,
-        char const *string,
+        struct stringv *STRINGV_RESTRICT s,
+        char const *STRINGV_RESTRICT string,
         int length,
         block_pos first,
         block_pos last);
@@ -123,6 +130,10 @@ struct stringv *stringv_init(
         int buf_size,
         int block_size)
 {
+    UNUSED_FUNCTION(stringv_begin);
+    UNUSED_FUNCTION(stringv_end);
+    UNUSED_FUNCTION(stringv_next);
+
     if (!stringv
             || !buf
             || buf_size <= 1
@@ -136,7 +147,7 @@ struct stringv *stringv_init(
     stringv->block_size = block_size;
     stringv->block_used = stringv->string_count = 0;
     clear_block_range(stringv, 0, stringv->block_total);
-    
+
     return stringv;
 }
 
