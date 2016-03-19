@@ -219,7 +219,18 @@ int stringv_remove(
         struct stringv *stringv,
         string_pos sn);
 
-/* TODO documentation */
+/* Returns the address of the first string in the stringv suitable for
+ * iteration.
+ *
+ *      stringv     The stringv to begin iteration on
+ *      RETURNS     The pointer to the first string in the stringv, suitable
+ *                  for continued iteration with stringv_next and
+ *                  stringv_end.
+ *
+ *      PRE:        stringv is a valid stringv
+ *      POST:       stringv_begin(stringv) == stringv_get(stringv, 0)
+ *                  stringv unmodified
+ */
 static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_begin(
         struct stringv const *STRINGV_RESTRICT stringv)
 {
@@ -227,7 +238,17 @@ static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_begin(
     return stringv->buf;
 }
 
-/* TODO documentation */
+/* Returns the address of the one-past-the-end byte of the stringv's buffer.
+ * The pointer to be used should only be used in a comparison expression to
+ * stop iteration. Dereferencing this pointer is undefined behaviour.
+ *
+ *      stringv     The stringv to return the end pointer from.
+ *      RETURNS     A pointer to the one-past-the-end byte of the given
+ *                  stringv's buffer.
+ *
+ *      PRE:        stringv is a valid stringv
+ *      POST:       stringv unmodified
+ */
 static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_end(
         struct stringv const *STRINGV_RESTRICT stringv)
 {
@@ -235,7 +256,23 @@ static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_end(
     return stringv->buf + (stringv->block_size * stringv->block_used);
 }
 
-/* TODO documentation */
+/* Given a stringv and an iterator (pointer to const char), string_next
+ * computes the address of string succeeding the given iterator. Dereferencing
+ * the pointer returned by stringv_next is undefined behaviour if the
+ * address lies beyond the stringv's buffer. When calling stringv_next in an
+ * iterative context, a comparison with stringv_end should be made at each
+ * iteration in order to avoid invoking undefined behaviour.
+ *
+ *      stringv     The stringv to iterate upon.
+ *      iter        The iterator to return the next iterator to.
+ *
+ *      PRE:        stringv is a valid stringv
+ *                  iter >= stringv->buf && iter < stringv->buf
+ *                  iter points to the start of a block
+ *      POST:       stringv unmodified
+ *                  returned pointer <= stringv_end
+ *                  returned pointer p dereferenceable iff p != stringv_end
+ */
 static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_next(
         struct stringv const *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT iter)
