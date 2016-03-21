@@ -7,16 +7,26 @@ TESTS=(test_init test_clear test_copy test_push_back \
 
 # The number of succeeded tests
 SUCCEEDED=0
+MISSING=0
 
 # Run all the tests
-for i in "${TESTS[@]}"
+for test in "${TESTS[@]}"
 do
-    printf "\n### %s ###\n" "$i"
-    bin/$i
-    if (($? == 0)); then
-        SUCCEEDED=$((SUCCEEDED + 1))
+    printf "\n### %s ###\n" "$test"
+
+    if [ -e "bin/$test" ]; then
+        bin/$test
+
+        if (($? == 0)); then
+            SUCCEEDED=$((SUCCEEDED + 1))
+        fi
+    else
+        echo "### Test ${test} not found! ###"
+        MISSING=$((MISSING + 1))
     fi
 done
 
-printf "\n### TESTS COMPLETED: %d/%d PASSED ###\n" "$SUCCEEDED" \
-    ${#TESTS[@]}
+COMPLETEDMSG="### Tests completed! ###"
+printf "\n%s\n\tPassed: %d\n\tFailed: %d\n\tMissing: %d\n" \
+    "$COMPLETEDMSG" "$SUCCEEDED" "$((${#TESTS[@]}-$SUCCEEDED-$MISSING))" \
+    "$MISSING"
