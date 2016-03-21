@@ -8,7 +8,7 @@ int run_test(test_case const* test)
     int result;
     assert(test);
 
-    printf("%s:\t", test->name);
+    printf("%-32s", test->name);
     result = test->function();
     printf("%s\n", result ? "succeeded" : "FAILED");
     return result;
