@@ -32,4 +32,4 @@ all: $(TESTBIN)
 
 .PHONY: clean
 clean:
-	rm -rf ./$(OBJDIR)/* ./$(BINDIR)/*
+	rm -f ./$(OBJDIR)/* ./$(BINDIR)/*
