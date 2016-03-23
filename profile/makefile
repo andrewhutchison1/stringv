@@ -1,6 +1,6 @@
 CC=clang
 CPPFLAGS=-DNDEBUG
-CFLAGS=-std=c99 -pedantic -m64 -fno-common -O2
+CFLAGS=-std=c99 -pedantic -m64 -fno-common -O3
 LDFLAGS=
 
 OBJDIR=obj

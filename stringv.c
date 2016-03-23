@@ -5,14 +5,6 @@
 typedef int block_pos;
 typedef char *block_ptr;
 
-/* The iteration functions are defined in stringv.h but are not used in this
- * translation unit. For compiles with strict warnings, the compiler will
- * complain that the functions stringv_begin, stringv_end and stringv_next are
- * unused. So we can use this macro to trick the compiler front-end into
- * thinking the functions are used but in actuality they compile to a no-op.
- */
-#define UNUSED_FUNCTION(f) ((void)(f))
-
 /* The following functions are only called in assert expressions. If NDEBUG
  * is defined, the asserts compile to no-ops but the declarations (and
  * definitions) of these functions would remain. This may cause strict
@@ -137,10 +129,6 @@ struct stringv *stringv_init(
         int buf_size,
         int block_size)
 {
-    UNUSED_FUNCTION(stringv_begin);
-    UNUSED_FUNCTION(stringv_end);
-    UNUSED_FUNCTION(stringv_next);
-
     if (!stringv
             || !buf
             || buf_size <= 1
