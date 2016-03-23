@@ -7,15 +7,11 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-#if defined(__STDC__)
-#   if defined(__STD_VERSION__) && __STD_VERSION__ >= 199901L
-#       define STRINGV_RESTRICT restrict
-#       define STRINGV_INLINE inline
-#   else
-#       define STRINGV_RESTRICT /* Nothing */
-#       define STRINGV_INLINE /* Nothing */
-#   endif
-#endif /* defined(__STDC__) */
+#if defined(__STDC__) && defined(__STD_VERSION__) && __STD_VERSION__ >= 199901
+#   define STRINGV_RESTRICT restrict
+#else
+#   define STRINGV_RESTRICT /* Nothing */
+#endif /* defined(__STDC__) && ... */
 
 struct stringv {
     char *buf;
@@ -231,12 +227,7 @@ int stringv_remove(
  *      POST:       stringv_begin(stringv) == stringv_get(stringv, 0)
  *                  stringv unmodified
  */
-static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_begin(
-        struct stringv const *STRINGV_RESTRICT stringv)
-{
-    assert(stringv);
-    return stringv->buf;
-}
+char const *stringv_begin(struct stringv const *stringv);
 
 /* Returns the address of the one-past-the-end byte of the stringv's buffer.
  * The pointer to be used should only be used in a comparison expression to
@@ -249,12 +240,7 @@ static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_begin(
  *      PRE:        stringv is a valid stringv
  *      POST:       stringv unmodified
  */
-static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_end(
-        struct stringv const *STRINGV_RESTRICT stringv)
-{
-    assert(stringv);
-    return stringv->buf + (stringv->block_size * stringv->block_used);
-}
+char const *stringv_end(struct stringv const *stringv);
 
 /* Given a stringv and an iterator (pointer to const char), string_next
  * computes the address of string succeeding the given iterator. Dereferencing
@@ -273,19 +259,9 @@ static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_end(
  *                  returned pointer <= stringv_end
  *                  returned pointer p dereferenceable iff p != stringv_end
  */
-static STRINGV_INLINE char const *STRINGV_RESTRICT stringv_next(
+char const *stringv_next(
         struct stringv const *STRINGV_RESTRICT stringv,
-        char const *STRINGV_RESTRICT iter)
-{
-    assert(stringv);
-    assert(iter);
-
-    do {
-        iter += stringv->block_size;
-    } while (*(iter - 1) != '\0');
-
-    return iter;
-}
+        char const *STRINGV_RESTRICT iter);
 
 #if defined(__cplusplus)
 }

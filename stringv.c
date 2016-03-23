@@ -367,6 +367,35 @@ int stringv_remove(
     return 1;
 }
 
+char const *stringv_begin(struct stringv const *stringv)
+{
+    assert(stringv);
+    assert(valid_stringv(stringv));
+    return stringv->buf;
+}
+
+char const *stringv_end(struct stringv const *stringv)
+{
+    assert(stringv);
+    assert(valid_stringv(stringv));
+    return stringv->buf + (stringv->block_size * stringv->block_used);
+}
+
+char const *stringv_next(
+        struct stringv const *stringv,
+        char const *iter)
+{
+    assert(stringv);
+    assert(valid_stringv(stringv));
+    assert(iter);
+
+    do {
+        iter += stringv->block_size;
+    } while (*(iter - 1) != '\0');
+
+    return iter;
+}
+
 #ifndef NDEBUG
 
 int valid_stringv(
