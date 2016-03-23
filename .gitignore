@@ -1,7 +1,2 @@
 .DS_Store
-test/bin/*
-test/obj/*
-profile/bin/*
-profile/obj/*
-profile/sample/*
 profile/__pycache__
