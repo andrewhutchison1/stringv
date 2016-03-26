@@ -263,6 +263,14 @@ char const *stringv_next(
         struct stringv const *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT iter);
 
+/* TODO documentation */
+typedef int (*lexicographical_compare)(char const *, char const *, size_t);
+
+/* TODO documentation */
+struct stringv *stringv_quicksort(
+        struct stringv *stringv,
+        lexicographical_compare comp);
+
 #if defined(__cplusplus)
 }
 #endif /* defined(__cplusplus) */
