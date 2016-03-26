@@ -123,6 +123,33 @@ static block_ptr block_write(
         block_pos first,
         block_pos last);
 
+/* TODO */
+static void swap_block(
+        struct stringv *s,
+        block_pos bn1,
+        block_pos bn2);
+
+/* TODO */
+static void swap_block_range_equal(
+        struct stringv *s,
+        block_pos first1,
+        block_pos first2,
+        int size);
+
+/* TODO */
+static void swap_block_range(
+        struct stringv *s,
+        block_pos first1,
+        block_pos last1,
+        block_pos first2,
+        block_pos last2);
+
+/* TODO */
+static void swap_string(
+        struct stringv *s,
+        string_pos sn1,
+        string_pos sn2);
+
 struct stringv *stringv_init(
         struct stringv *stringv,
         char *buf,
@@ -382,6 +409,12 @@ char const *stringv_next(
     } while (*(iter - 1) != '\0');
 
     return iter;
+}
+
+struct stringv *stringv_quicksort(
+        struct stringv *stringv,
+        lexicographical_compare comp)
+{
 }
 
 #ifndef NDEBUG
@@ -666,4 +699,35 @@ block_ptr block_write(
     ++s->string_count;
 
     return write_ptr;
+}
+
+void swap_block(
+        struct stringv *s,
+        block_pos bn1,
+        block_pos bn2)
+{
+}
+
+void swap_block_range_equal(
+        struct stringv *s,
+        block_pos first1,
+        block_pos first2,
+        int size)
+{
+}
+
+void swap_block_range(
+        struct stringv *s,
+        block_pos first1,
+        block_pos last1,
+        block_pos first2,
+        block_pos last2)
+{
+}
+
+void swap_string(
+        struct stringv *s,
+        string_pos sn1,
+        string_pos sn2)
+{
 }
