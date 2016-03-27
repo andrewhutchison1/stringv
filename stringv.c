@@ -21,6 +21,12 @@ static int valid_block_pos(
         struct stringv const *s,
         block_pos bn);
 
+/* Checks that the block range specified by [first, last) is valid */
+static int valid_block_range(
+        struct stringv const *s,
+        block_pos first,
+        block_pos last);
+
 #endif /* NDEBUG */
 
 /* Checks that a string_pos is valid, given the corresponding stringv. A
@@ -441,6 +447,17 @@ int valid_block_pos(
     return  bn >= 0 && bn <= s->block_total;
 }
 
+int valid_block_range(
+        struct stringv const *s,
+        block_pos first,
+        block_pos last)
+{
+    return s
+        && valid_block_pos(s, first)
+        && (valid_block_pos(s, last) || s == s->block_used)
+        && (first < last);
+}
+
 #endif /* NDEBUG */
 
 int valid_string_pos(
@@ -507,8 +524,7 @@ block_pos clear_block_range(
         block_pos last)
 {
     assert(s && valid_stringv(s));
-    assert(valid_block_pos(s, first));
-    assert(valid_block_pos(s, last) || last == s->block_total);
+    assert(valid_block_range(s, first, last);
 
     memset(block_pos_to_block_ptr(s, first),
             0,
@@ -655,9 +671,7 @@ block_pos shift_blocks(
         int offset)
 {
     assert(s && valid_stringv(s));
-    assert(valid_block_pos(s, first));
-    assert(valid_block_pos(s, last));
-    assert(last > first);
+    assert(valid_block_range(s, first, last));
     assert(offset != 0);
 
     memmove(
@@ -690,9 +704,7 @@ block_ptr block_write(
     assert(s && valid_stringv(s));
     assert(string);
     assert(length > 0);
-    assert(valid_block_pos(s, first));
-    assert(valid_block_pos(s, last));
-    assert(last > first);
+    assert(valid_block_range(s, first, last));
 
     write_ptr = memcpy(block_pos_to_block_ptr(s, first), string, length);
     s->block_used += (last - first);
@@ -706,6 +718,25 @@ void swap_block(
         block_pos bn1,
         block_pos bn2)
 {
+    block_ptr bp1 = NULL;
+    block_ptr bp2 = NULL;
+    int i = 0;
+    char temp = 0;
+
+    assert(s && valid_stringv(s));
+    assert(valid_block_pos(s, bn1));
+    assert(valid_block_pos(s, bn2));
+    assert(bn1 != bn2);
+
+    bp1 = block_pos_to_block_ptr(s, bn1);
+    bp2 = block_pos_to_block_ptr(s, bn2);
+
+    /* TODO maybe optimise with int-sized copies? */
+    for (i = 0; i < s->block_size; ++i) {
+        temp = *(bp1 + i);
+        *(bp1 + i) = *(bp2 + i);
+        *(bp2 + i) = temp;
+    }
 }
 
 void swap_block_range_equal(
@@ -714,6 +745,16 @@ void swap_block_range_equal(
         block_pos first2,
         int size)
 {
+    int i = 0;
+
+    assert(s && valid_stringv(s));
+    assert(size > 0 && size < s->block_used);
+    assert(valid_block_range(s, first1, first1 + size));
+    assert(valid_block_range(s, first2, first2 + size));
+
+    for (i = 0; i < size; ++i) {
+        swap_block(s, first1 + i, first2 + i);
+    }
 }
 
 void swap_block_range(
@@ -723,6 +764,9 @@ void swap_block_range(
         block_pos first2,
         block_pos last2)
 {
+    assert(s && valid_stringv(s));
+    assert(valid_block_range(s, first1, last1));
+    assert(valid_block_range(s, first1, last1));
 }
 
 void swap_string(
@@ -730,4 +774,22 @@ void swap_string(
         string_pos sn1,
         string_pos sn2)
 {
+    int count1 = 0, count2 = 0;
+    block_pos bn1 = 0, bn2 = 0;
+
+    assert(s && valid_stringv(s));
+    assert(valid_string_pos(s, sn1, 1));
+    assert(valid_string_pos(s, sn2, 1));
+    assert(sn1 != sn2);
+
+    count1 = blocks_required_by(s, sn1);
+    count2 = blocks_required_by(s, sn2);
+    bn1 = string_pos_to_block_pos(s, sn1);
+    bn2 = string_pos_to_block_pos(s, sn2);
+
+    if (count1 == count2) {
+        swap_block_range_equal(s, bn1, bn2, count1);
+    } else {
+        swap_block_range(s, bn1, bn1 + count1, bn2, bn2 + count2);
+    }
 }
