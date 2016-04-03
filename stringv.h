@@ -1,7 +1,7 @@
 #ifndef STRINGV_H_
 #define STRINGV_H_
 
-#include <assert.h>
+#include <stddef.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -24,6 +24,13 @@ struct stringv {
 /* The string_pos is an integral quantity that determines (uniquely) a
  * specific string inside a stringv. */
 typedef int string_pos;
+
+/* Comparison function used to compare strings in a stringv. Currently only
+ * used by stringv_sort. The function should have identical semantics to
+ * strnlen: returning 0 if the strings are equal, or negative/positive
+ * values if the first string is lexicographically lesser or greater than
+ * the second respectively. */
+typedef int (*lexicographical_compare)(char const *, char const *, size_t);
 
 /* Initialises a stringv to an initial valid (but empty) state with the
  * given block size. If the function succeeds, a pointer to an initialised
@@ -85,6 +92,7 @@ char const *stringv_get(struct stringv const *stringv, int n);
  *      POST:       (stringv != NULL) ==> (stringv->buf == {0, ..., 0})
  *                          && (stringv->block_used == 0)
  *                          && (stringv->string_count == 0)
+ *                  Iterators invalidated
  */
 struct stringv *stringv_clear(struct stringv *stringv);
 
@@ -137,6 +145,7 @@ int stringv_copy(
  *      POST:       stringv->block_used increased
  *                  stringv->string_count incremented
  *                  return pointer == &(stringv->string_count - 1)th string
+ *                  Iterators invalidated
  */
 char const *stringv_push_back(
         struct stringv *STRINGV_RESTRICT stringv,
@@ -165,6 +174,7 @@ char const *stringv_push_back(
  *      POST:       stringv->block_used increased
  *                  stringv->string_count incremented
  *                  return pointer == &(0th string) == &stringv->buf[0]
+ *                  Iterators invalidated
  */
 char const *stringv_push_front(
         struct stringv *STRINGV_RESTRICT stringv,
@@ -191,6 +201,7 @@ char const *stringv_push_front(
  *                  length > 0
  *                  index >= 0 && index < stringv->string_count
  *      POST:       stringv_get(stringv, index) == string
+ *                  Iterators invalidated
  */
 char const *stringv_insert(
         struct stringv *STRINGV_RESTRICT stringv,
@@ -210,6 +221,7 @@ char const *stringv_insert(
  *                  index >= 0 && index < stringv->string_count
  *      POST:       stringv->string_count decremented
  *                  stringv->block_used decreased
+ *                  Iterators invalidated
  */
 int stringv_remove(
         struct stringv *stringv,
@@ -263,11 +275,28 @@ char const *stringv_next(
         struct stringv const *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT iter);
 
-/* TODO documentation */
-typedef int (*lexicographical_compare)(char const *, char const *, size_t);
-
-/* TODO documentation */
-struct stringv *stringv_quicksort(
+/* Sorts the given stringv against the supplied comparison function. This
+ * function does not allocate extra memory and hence all string moves are
+ * done in place, which may be expensive. The sorting algorithm used varies
+ * between quicksort and insertion sort depending on the capacity of
+ * the stringv according to what is deemed to be more efficient. Avoid calling
+ * this function on an already sorted stringv as it may incur quadratic
+ * time complexity.
+ *
+ *      stringv     The stringv to sort.
+ *      comp        A lexicographical comparator used in sorting. This function
+ *                  must have the same semantics as strnlen.
+ *
+ *      PRE:        stringv is a valid stringv
+ *                  comp semantically equivalent to strnlen
+ *      POST:       stringv_get(s, 0) < ... < stringv_get(s, N) under comp
+ *                  Iterators invalidated if stringv->string_count > 1
+ *
+ *      TODO        - Use insertion sort for smaller capacity (profile)
+ *                  - Investigate vectorisation of loop in swap_block
+ *                  - Clean up implementation of partition
+ */
+struct stringv *stringv_sort(
         struct stringv *stringv,
         lexicographical_compare comp);
 
