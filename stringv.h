@@ -298,6 +298,8 @@ char const *stringv_next(
  *      TODO        - Use insertion sort for smaller capacity (profile)
  *                  - Investigate vectorisation of loop in swap_block
  *                  - Clean up implementation of partition
+ *                  - quicksort is currently implemented recursively, rewrite
+ *                      it iteratively
  */
 struct stringv *stringv_sort(
         struct stringv *stringv,

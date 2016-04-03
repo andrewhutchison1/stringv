@@ -132,18 +132,29 @@ static block_ptr block_write(
         block_pos last);
 
 /* Swaps the blocks denoted by bn1 and bn2 respectively. */
-void swap_block(struct stringv *s, block_pos bn1, block_pos bn2);
+static void swap_block(struct stringv *s, block_pos bn1, block_pos bn2);
 
 /* Reverses the block range denoted by [first, last) through iterative
  * swaps. */
-void reverse_block_range(struct stringv *s, block_pos first, block_pos last);
+static void reverse_block_range(
+        struct stringv *s,
+        block_pos first,
+        block_pos last);
 
 /* Swaps the two strings by iteratively swapping their constituent block
  * ranges. */
-void swap_string(struct stringv *s, string_pos sn1, string_pos sn2);
+static void swap_string(struct stringv *s, string_pos sn1, string_pos sn2);
+
+/* Insertion sort. Should be used to sort when there are few elements in the
+ * stringv. */
+static void insertion_sort(
+        struct stringv *s,
+        lexicographical_compare comp,
+        string_pos first,
+        string_pos last);
 
 /* Partition operation used in quicksort. */
-block_pos partition(
+static block_pos partition(
         struct stringv *s,
         lexicographical_compare comp,
         string_pos first,
@@ -151,7 +162,7 @@ block_pos partition(
 
 /* Sorts the given string range denoted by [first, last) using the quicksort
  * algorithm. */
-void quicksort(
+static void quicksort(
         struct stringv *s,
         lexicographical_compare comp,
         string_pos first,
@@ -764,6 +775,27 @@ void swap_string(struct stringv *s, string_pos sn1, string_pos sn2)
             s,
             (first1 < first2) ? first1 : first2,
             (first1 < first2) ? last2 : last1);
+}
+
+void insertion_sort(
+        struct stringv *s,
+        lexicographical_compare comp,
+        string_pos first,
+        string_pos last)
+{
+    string_pos i = 0, j = 0;
+
+    assert(s && valid_stringv(s));
+    assert(comp);
+    assert(first < last);
+
+    for (i = 1; i < s->string_count; ++i) {
+        j = i;
+        while (j > 0 && comp(stringv_get(s, j-1), stringv_get(s, j)) > 0) {
+            swap_string(s, j, j-1);
+            --j;
+        }
+    }
 }
 
 block_pos partition(
