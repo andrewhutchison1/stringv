@@ -789,10 +789,10 @@ void insertion_sort(
     assert(comp);
     assert(first < last);
 
-    for (i = 1; i < s->string_count; ++i) {
+    for (i = first + 1; i < last; ++i) {
         j = i;
-        while (j > 0 && comp(stringv_get(s, j-1), stringv_get(s, j)) > 0) {
-            swap_string(s, j, j-1);
+        while (j > 0 && comp(stringv_get(s, j - 1), stringv_get(s, j)) > 0) {
+            swap_string(s, j, j - 1);
             --j;
         }
     }
