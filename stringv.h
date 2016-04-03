@@ -7,6 +7,11 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
+/* Many of the stringv function prototypes involve *in* parameters that are
+ * pointers to char. Since strict aliasing actually allows pointers to char to
+ * alias pointers to non-char types, the restrict keyword becomes useful for
+ * stringv functions that may be called in loops (such as stringv_next) to
+ * lead to better code gen. */
 #if defined(__STDC__) && defined(__STD_VERSION__) && __STD_VERSION__ >= 199901
 #   define STRINGV_RESTRICT restrict
 #else

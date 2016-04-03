@@ -3,7 +3,15 @@
 #include <assert.h>
 #include <string.h>
 
-typedef int block_pos;
+/* block_pos is an integral quantity that uniquely determines a block in a
+ * stringv. It is defined in terms of a string_pos because in a one-to-one
+ * stringv (ie. stringv->block_used == stringv->string_count) a string_pos
+ * and block_pos may be used interchangeably. Otherwise, a string_pos must be
+ * converted into a block_pos through the function string_pos_to_block_pos. */
+typedef string_pos block_pos;
+
+/* A block_ptr is simply a pointer to char, but is distinguished syntactically
+ * with the promise that is points to the start of a block. */
 typedef char *block_ptr;
 
 /* The following functions are only called in assert expressions. If NDEBUG
