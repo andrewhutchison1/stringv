@@ -22,13 +22,10 @@ typedef char *block_ptr;
 #ifndef NDEBUG
 
 /* Checks that a stringv is valid. */
-static int valid_stringv(
-        struct stringv const *s);
+static int valid_stringv(struct stringv const *s);
 
 /* Checks that a block_pos is valid, given the corresponding stringv. */
-static int valid_block_pos(
-        struct stringv const *s,
-        block_pos bn);
+static int valid_block_pos(struct stringv const *s, block_pos bn);
 
 /* Checks that the block range specified by [first, last) is valid */
 static int valid_block_range(
@@ -44,10 +41,7 @@ static int valid_block_range(
  * in the interval [0, s->string_count], since a write at the
  * (s->string_count)th position is equivalent to (and treated as) a push back.
  */
-static int valid_string_pos(
-        struct stringv const *s,
-        string_pos sn,
-        int read);
+static int valid_string_pos(struct stringv const *s, string_pos sn, int read);
 
 /* Given a string_pos, returns the corresponding block pos. */
 static block_pos string_pos_to_block_pos(
@@ -56,17 +50,22 @@ static block_pos string_pos_to_block_pos(
 
 /* Given a block_pos, returns the corresponding address of the start of that
  * block. */
-static block_ptr block_pos_to_block_ptr(
-        struct stringv const *s,
-        block_pos bn);
+static block_ptr block_pos_to_block_ptr(struct stringv const *s, block_pos bn);
 
-/* Returns a pointer to the string determined by the given string_pos. */
+/* Returns a pointer to the string determined by the given string_pos. This
+ * is essentially a composition of string_pos_to_block_pos and
+ * block_pos_to_block_ptr. */
 static block_ptr string_pos_to_block_ptr(
         struct stringv const *s,
         string_pos sn);
 
-/* Clears the block range [first, last) by setting each block to binary zero.
- * Returns first. */
+/* Returns 1 if the stringv is one-to-one (ie. string_count == block_used).
+ * Functions operating on stringv work optimally when the stringv is one-to-
+ * one. */
+static int is_one_to_one(struct stringv const *s);
+
+/* Clears the block range [first, last) by filling each block in the range
+ * with zeros. Returns first. */
 static block_pos clear_block_range(
         struct stringv *s,
         block_pos first,
@@ -75,22 +74,16 @@ static block_pos clear_block_range(
 /* Determines how many blocks would be required to store the given length
  * of data (in chars; NOT including the NUL terminator) in the given
  * stringv. */
-static int blocks_required(
-        struct stringv const *s,
-        int length);
+static int blocks_required(struct stringv const *s, int length);
 
 /* Determines if a given block is terminal. A block is terminal if it is
  * terminated with one or more NUL characters. Terminal blocks end multi-
  * block strings. */
-static int is_block_terminal(
-        struct stringv const *s,
-        block_pos bn);
+static int is_block_terminal(struct stringv const *s, block_pos bn);
 
 /* Determines how many blocks are used by the string located at the given
  * string_pos. */
-static int blocks_used_by(
-        struct stringv const *s,
-        string_pos sn);
+static int blocks_used_by(struct stringv const *s, string_pos sn);
 
 /* Copies blocks from a source stringv to a destination stringv assuming that
  * source and destination have identical block sizes and destination has
@@ -139,24 +132,15 @@ static block_ptr block_write(
         block_pos last);
 
 /* Swaps the blocks denoted by bn1 and bn2 respectively. */
-void swap_block(
-        struct stringv *s,
-        block_pos bn1,
-        block_pos bn2);
+void swap_block(struct stringv *s, block_pos bn1, block_pos bn2);
 
 /* Reverses the block range denoted by [first, last) through iterative
  * swaps. */
-void reverse_block_range(
-        struct stringv *s,
-        block_pos first,
-        block_pos last);
+void reverse_block_range(struct stringv *s, block_pos first, block_pos last);
 
 /* Swaps the two strings by iteratively swapping their constituent block
  * ranges. */
-void swap_string(
-        struct stringv *s,
-        string_pos sn1,
-        string_pos sn2);
+void swap_string(struct stringv *s, string_pos sn1, string_pos sn2);
 
 /* Partition operation used in quicksort. */
 block_pos partition(
@@ -196,9 +180,7 @@ struct stringv *stringv_init(
     return stringv;
 }
 
-char const *stringv_get(
-        struct stringv const *stringv,
-        string_pos sn)
+char const *stringv_get(struct stringv const *stringv, string_pos sn)
 {
     if (!stringv || !valid_string_pos(stringv, sn, 1)) {
         return NULL;
@@ -208,8 +190,7 @@ char const *stringv_get(
     return string_pos_to_block_ptr(stringv, sn);
 }
 
-struct stringv *stringv_clear(
-        struct stringv *stringv)
+struct stringv *stringv_clear(struct stringv *stringv)
 {
     if (stringv) {
         assert(valid_stringv(stringv));
@@ -220,9 +201,7 @@ struct stringv *stringv_clear(
     return stringv;
 }
 
-int stringv_copy(
-        struct stringv *dest,
-        struct stringv const *source)
+int stringv_copy(struct stringv *dest, struct stringv const *source)
 {
     if (!dest || !source) {
         return 0;
@@ -253,7 +232,7 @@ int stringv_copy(
      * used source blocks, then we don't need to compute the length of each
      * string before copying, as we know all strings will fit. */
     if (dest->block_size >= source->block_size
-            && source->block_used == source->string_count
+            && is_one_to_one(source)
             && dest->block_total >= source->block_used) {
         return copy_blockwise_injective(dest, source);
     }
@@ -351,9 +330,7 @@ char const *stringv_insert(
             write_pos + blocks_req);
 }
 
-int stringv_remove(
-        struct stringv *stringv,
-        string_pos sn)
+int stringv_remove(struct stringv *stringv, string_pos sn)
 {
     block_pos bn = 0;
     int offset = 0;
@@ -419,9 +396,7 @@ char const *stringv_end(struct stringv const *stringv)
     return stringv->buf + (stringv->block_size * stringv->block_used);
 }
 
-char const *stringv_next(
-        struct stringv const *stringv,
-        char const *iter)
+char const *stringv_next(struct stringv const *stringv, char const *iter)
 {
     assert(stringv);
     assert(valid_stringv(stringv));
@@ -455,8 +430,7 @@ struct stringv *stringv_sort(
 
 #ifndef NDEBUG
 
-int valid_stringv(
-        struct stringv const *s)
+int valid_stringv(struct stringv const *s)
 {
     return s
         && s->buf
@@ -466,9 +440,7 @@ int valid_stringv(
         && s->string_count >= 0 && s->string_count <= s->block_total;
 }
 
-int valid_block_pos(
-        struct stringv const *s,
-        block_pos bn)
+int valid_block_pos(struct stringv const *s, block_pos bn)
 {
     /* A block pos is valid if it is in the interval [0, s->block_total]. The
      * right end of the interval includes the block total since block positions
@@ -477,10 +449,7 @@ int valid_block_pos(
     return  bn >= 0 && bn <= s->block_total;
 }
 
-int valid_block_range(
-        struct stringv const *s,
-        block_pos first,
-        block_pos last)
+int valid_block_range(struct stringv const *s, block_pos first, block_pos last)
 {
     return s
         && valid_block_pos(s, first)
@@ -490,17 +459,12 @@ int valid_block_range(
 
 #endif /* NDEBUG */
 
-int valid_string_pos(
-        struct stringv const *s,
-        string_pos sn,
-        int read)
+int valid_string_pos(struct stringv const *s, string_pos sn, int read)
 {
     return sn >= 0 && (read ? sn < s->string_count : sn <= s->string_count);
 }
 
-block_pos string_pos_to_block_pos(
-        struct stringv const *s,
-        string_pos sn)
+block_pos string_pos_to_block_pos(struct stringv const *s, string_pos sn)
 {
     block_pos bn = 0;
 
@@ -515,7 +479,7 @@ block_pos string_pos_to_block_pos(
     /* If the stringv's string count is equal to the number of used blocks,
      * then the block position corresponding to any string position is simply
      * that string position. */
-    if (s->string_count == s->block_used) {
+    if (is_one_to_one(s)) {
         return sn;
     }
 
@@ -530,28 +494,27 @@ block_pos string_pos_to_block_pos(
     return bn;
 }
 
-block_ptr block_pos_to_block_ptr(
-        struct stringv const *s,
-        block_pos bn)
+block_ptr block_pos_to_block_ptr(struct stringv const *s, block_pos bn)
 {
     assert(s && valid_stringv(s));
     assert(valid_block_pos(s, bn));
     return s->buf + bn * s->block_size;
 }
 
-block_ptr string_pos_to_block_ptr(
-        struct stringv const *s,
-        string_pos sn)
+block_ptr string_pos_to_block_ptr(struct stringv const *s, string_pos sn)
 {
     return block_pos_to_block_ptr(
             s,
             string_pos_to_block_pos(s, sn));
 }
 
-block_pos clear_block_range(
-        struct stringv *s,
-        block_pos first,
-        block_pos last)
+int is_one_to_one(struct stringv const *s)
+{
+    assert(s && valid_stringv(s));
+    return s->string_count == s->block_used;
+}
+
+block_pos clear_block_range(struct stringv *s, block_pos first, block_pos last)
 {
     assert(s && valid_stringv(s));
     assert(valid_block_range(s, first, last));
@@ -563,9 +526,7 @@ block_pos clear_block_range(
     return first;
 }
 
-int blocks_required(
-        struct stringv const *s,
-        int length)
+int blocks_required(struct stringv const *s, int length)
 {
     assert(s && valid_stringv(s));
     assert(length > 0);
@@ -578,18 +539,15 @@ int blocks_required(
     return (length / s->block_size) + (length % s->block_size != 0);
 }
 
-int is_block_terminal(
-        struct stringv const *s,
-        block_pos bn)
+int is_block_terminal(struct stringv const *s, block_pos bn)
 {
     assert(s && valid_stringv(s));
     assert(valid_block_pos(s, bn));
-    return *(block_pos_to_block_ptr(s, bn) + s->block_size - 1) == '\0';
+    return is_one_to_one(s)
+        || *(block_pos_to_block_ptr(s, bn) + s->block_size - 1) == '\0';
 }
 
-int blocks_used_by(
-        struct stringv const *s,
-        string_pos sn)
+int blocks_used_by(struct stringv const *s, string_pos sn)
 {
     block_pos bn = 0;
     int i = 0;
@@ -599,7 +557,7 @@ int blocks_used_by(
 
     /* If the stringv has the same number of strings as it does used blocks,
      * then all strings necessarily occupy a single block */
-    if (s->string_count == s->block_used) {
+    if (is_one_to_one(s)) {
         return 1;
     }
 
@@ -636,7 +594,7 @@ int copy_blockwise_injective(
 
     assert(dest && valid_stringv(dest));
     assert(source && valid_stringv(source));
-    assert(source->block_used == source->string_count);
+    assert(is_one_to_one(s));
     assert(source->block_size <= dest->block_size);
 
     for (i = 0; i < source->string_count; ++i) {
@@ -655,9 +613,7 @@ int copy_blockwise_injective(
     return dest->string_count;
 }
 
-int copy_stringwise(
-        struct stringv *dest,
-        struct stringv const *source)
+int copy_stringwise(struct stringv *dest, struct stringv const *source)
 {
     string_pos i = 0;
     int ith_length = 0, blocks_req = 0;
@@ -743,10 +699,7 @@ block_ptr block_write(
     return write_ptr;
 }
 
-void swap_block(
-        struct stringv *s,
-        block_pos bn1,
-        block_pos bn2)
+void swap_block(struct stringv *s, block_pos bn1, block_pos bn2)
 {
     block_ptr bp1 = NULL;
     block_ptr bp2 = NULL;
@@ -769,10 +722,7 @@ void swap_block(
     }
 }
 
-void reverse_block_range(
-        struct stringv *s,
-        block_pos first,
-        block_pos last)
+void reverse_block_range(struct stringv *s, block_pos first, block_pos last)
 {
     int i = 0;
 
@@ -784,10 +734,7 @@ void reverse_block_range(
     }
 }
 
-void swap_string(
-        struct stringv *s,
-        string_pos sn1,
-        string_pos sn2)
+void swap_string(struct stringv *s, string_pos sn1, string_pos sn2)
 {
     block_pos first1 = 0, last1 = 0, first2 = 0, last2 = 0;
 
@@ -797,8 +744,9 @@ void swap_string(
 
     if (sn1 == sn2) {
         return;
-    } else if (s->string_count == s->block_used) {
+    } else if (is_one_to_one(s)) {
         swap_block(s, sn1, sn2);
+        return;
     }
 
     /* Reversing the first and second block ranges individually, and then

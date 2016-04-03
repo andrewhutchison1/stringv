@@ -228,9 +228,7 @@ char const *stringv_insert(
  *                  stringv->block_used decreased
  *                  Iterators invalidated
  */
-int stringv_remove(
-        struct stringv *stringv,
-        string_pos sn);
+int stringv_remove(struct stringv *stringv, string_pos sn);
 
 /* Returns the address of the first string in the stringv suitable for
  * iteration.
