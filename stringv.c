@@ -435,7 +435,10 @@ struct stringv *stringv_sort(
         return stringv;
     }
 
+    /* TODO After profiling, determine an appropriate upper bound for which to
+     *      choose quicksort instead of insertion sort */
     quicksort(stringv, comp, 0, stringv->string_count);
+
     return stringv;
 }
 
@@ -783,7 +786,9 @@ void insertion_sort(
         string_pos first,
         string_pos last)
 {
-    string_pos i = 0, j = 0;
+    char const *s1 = NULL, *s2 = NULL;
+    size_t l1 = 0, l2 = 0;
+    string_pos i = 0, j = 0, result = 0;
 
     assert(s && valid_stringv(s));
     assert(comp);
@@ -791,7 +796,15 @@ void insertion_sort(
 
     for (i = first + 1; i < last; ++i) {
         j = i;
-        while (j > 0 && comp(stringv_get(s, j - 1), stringv_get(s, j)) > 0) {
+
+        /* Get the strings and compute their length. */
+        s1 = stringv_get(s, j - 1);
+        s2 = stringv_get(s, j);
+        l1 = strlen(s1);
+        l2 = strlen(s2);
+        result = comp(s1, s2, (l1 < l2) ? l1 : l2);
+
+        while (j > 0 && result > 0) {
             swap_string(s, j, j - 1);
             --j;
         }
