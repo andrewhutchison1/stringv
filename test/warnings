@@ -1,5 +1,5 @@
--Wall -Wextra -Weverything -Wshadow
+-Wall -Wextra -Weverything -Wshadow -Werror
 -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
 -Wcast-align -Wswitch-default -Wbad-function-cast -Winline -Wundef
 -Wnested-externs -Wwrite-strings -Wconversion -Wunreachable-code
--fno-common -fstrict-aliasing -Werror -Wstrict-overflow=5 -Wunused-function
+-Wstrict-overflow=5 -Wunused-function
