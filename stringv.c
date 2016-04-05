@@ -145,8 +145,8 @@ static void reverse_block_range(
  * ranges. */
 static void swap_string(struct stringv *s, string_pos sn1, string_pos sn2);
 
-/* Insertion sort. Should be used to sort when there are few elements in the
- * stringv. */
+/* Sorts the given string range denoted by [first, last) using the insertion
+ * sort algorithm. */
 static void insertion_sort(
         struct stringv *s,
         lexicographical_compare comp,
@@ -250,7 +250,6 @@ int stringv_copy(struct stringv *dest, struct stringv const *source)
 
     return copy_stringwise(dest, source);
 }
-
 
 char const *stringv_push_back(
         struct stringv *stringv,
