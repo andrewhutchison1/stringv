@@ -6,7 +6,7 @@ LDFLAGS=
 OBJDIR=obj
 BINDIR=bin
 
-PROFILES=profile_iteration
+PROFILES=
 PROFILEBIN=$(addprefix $(BINDIR)/,$(PROFILES))
 PROFILEDEPS=$(addprefix $(OBJDIR)/,stringv.o profile.o)
 
