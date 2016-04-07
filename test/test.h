@@ -21,9 +21,6 @@ typedef struct {
 /* Number of items in test case array */
 #define TEST_COUNT(tests) (sizeof((tests))/sizeof((tests)[0]))
 
-/* Zero struct literal for the RHS of a stringv declaration */
-#define STRINGV_ZERO {NULL,0,0,0,0}
-
 /* Runs a single test. Returns a value indicating test failure or success
  * suitable for returning from main */
 int run_test(test_case const* test);
