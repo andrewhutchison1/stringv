@@ -182,6 +182,9 @@ struct stringv *stringv_init(
         return NULL;
     }
 
+    /* TODO */
+    (void)insertion_sort;
+
     stringv->buf = buf;
     stringv->block_total = buf_size / block_size;
     stringv->block_size = block_size;
@@ -338,6 +341,42 @@ char const *stringv_insert(
             length,
             write_pos,
             write_pos + blocks_req);
+}
+
+int stringv_split(
+        struct stringv *STRINGV_RESTRICT stringv,
+        char const *STRINGV_RESTRICT string,
+        int length,
+        char separator)
+{
+    int i = 0, start = 0;
+
+    if (!stringv || !string || length <= 0) {
+        return 0;
+    }
+
+    for (i = 0; i < length; ++i) {
+        /* Upon encountering a separator character, attempt to push back the
+         * string. If it fails, return the start index of the string (and not
+         * i) since the partial string from start to i was not pushed back
+         * into the stringv. */
+        if (string[i] == separator) {
+            if (!stringv_push_back(stringv, string + start, i - start)) {
+                return start;
+            } else {
+                /* The push back succeeded, so we can continue after we set
+                 * the start index to i + 1 which denotes the character
+                 * immediately after the separator char we just found. */
+                start = i + 1;
+            }
+        }
+    }
+
+    if (!stringv_push_back(stringv, string + start, length - start)) {
+        return start;
+    } else {
+        return length;
+    }
 }
 
 int stringv_remove(struct stringv *stringv, string_pos sn)

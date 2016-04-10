@@ -224,6 +224,31 @@ char const *stringv_insert(
         int length,
         int index);
 
+/* Inserts into a stringv each substring of the given string, up to length,
+ * where each substring is delimited by the given separator character. The
+ * string is inserted as if a call to string_push_back was made. If there is
+ * insufficient space to store a substring, the stringv will retain all
+ * previous insertions.
+ *
+ *      stringv     The stringv to write to.
+ *      string      The string to split.
+ *      length      The length of the argument string.
+ *      separator   The separator (delimiting) character.
+ *      RETURNS     The index of the first non-delimiter character that was
+ *                  not read into the stringv if there is insufficient space,
+ *                  or length otherwise.
+ *
+ *      PRE:        stringv != NULL
+ *                  string != NULL
+ *                  length > 0
+ *      POST:       stringv data not overwritten or deleted
+ */
+int stringv_split(
+        struct stringv *STRINGV_RESTRICT stringv,
+        char const *STRINGV_RESTRICT string,
+        int length,
+        char separator);
+
 /* Removes the string specified by the index argument from the stringv.
  * Returns 1 on success or 0 on failure, occuring when the arguments are
  * invalid or the index is out of range
