@@ -1,5 +1,5 @@
 CC=clang
-CPPFLAGS=-DNDEBUG
+CPPFLAGS=
 CFLAGS=-std=c99 -pedantic -m64 -fno-common -fstrict-aliasing @warnings -ggdb3
 LDFLAGS=
 
@@ -7,7 +7,7 @@ OBJDIR=obj
 BINDIR=bin
 
 TESTS=test_init test_clear test_copy test_push_back test_push_front \
-	  test_get test_insert test_remove test_iteration test_sort
+	  test_get test_insert test_remove test_iteration test_sort test_split
 TESTBIN=$(addprefix $(BINDIR)/,$(TESTS))
 TESTDEPS=$(addprefix $(OBJDIR)/,stringv.o test.o)
 
