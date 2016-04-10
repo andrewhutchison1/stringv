@@ -466,7 +466,7 @@ struct stringv *stringv_sort(
         return NULL;
     }
 
-    assert(valid_string(stringv));
+    assert(valid_stringv(stringv));
 
     /* If there are zero or one strings we don't need to sort anything. */
     if (stringv->string_count <= 1) {
@@ -505,7 +505,7 @@ int valid_block_range(struct stringv const *s, block_pos first, block_pos last)
 {
     return s
         && valid_block_pos(s, first)
-        && (valid_block_pos(s, last) || s == s->block_used)
+        && (valid_block_pos(s, last) || last == s->block_used)
         && (first < last);
 }
 
@@ -646,7 +646,7 @@ int copy_blockwise_injective(
 
     assert(dest && valid_stringv(dest));
     assert(source && valid_stringv(source));
-    assert(is_one_to_one(s));
+    assert(is_one_to_one(source));
     assert(source->block_size <= dest->block_size);
 
     for (i = 0; i < source->string_count; ++i) {
@@ -791,8 +791,8 @@ void swap_string(struct stringv *s, string_pos sn1, string_pos sn2)
     block_pos first1 = 0, last1 = 0, first2 = 0, last2 = 0;
 
     assert(s && valid_stringv(s));
-    assert(valid_string_pos(s, sn1));
-    assert(valid_string_pos(s, sn2));
+    assert(valid_string_pos(s, sn1, 0));
+    assert(valid_string_pos(s, sn2, 0));
 
     if (sn1 == sn2) {
         return;
