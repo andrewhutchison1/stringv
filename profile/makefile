@@ -6,9 +6,9 @@ LDFLAGS=
 OBJDIR=obj
 BINDIR=bin
 
-PROFILES=
+PROFILES=profile_random_access
 PROFILEBIN=$(addprefix $(BINDIR)/,$(PROFILES))
-PROFILEDEPS=$(addprefix $(OBJDIR)/,stringv.o profile.o)
+PROFILEDEPS=$(addprefix $(OBJDIR)/,stringv.o profile.o profile_main.o)
 
 # Compile the stringv module
 $(OBJDIR)/stringv.o: ../stringv.c ../stringv.h
@@ -16,6 +16,9 @@ $(OBJDIR)/stringv.o: ../stringv.c ../stringv.h
 
 # Compile the profile object
 $(OBJDIR)/profile.o: profile.c profile.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/profile_main.o: profile_main.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compiles the profiles
