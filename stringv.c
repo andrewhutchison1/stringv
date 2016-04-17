@@ -131,43 +131,6 @@ static block_ptr block_write(
         block_pos first,
         block_pos last);
 
-/* Swaps the blocks denoted by bn1 and bn2 respectively. */
-static void swap_block(struct stringv *s, block_pos bn1, block_pos bn2);
-
-/* Reverses the block range denoted by [first, last) through iterative
- * swaps. */
-static void reverse_block_range(
-        struct stringv *s,
-        block_pos first,
-        block_pos last);
-
-/* Swaps the two strings by iteratively swapping their constituent block
- * ranges. */
-static void swap_string(struct stringv *s, string_pos sn1, string_pos sn2);
-
-/* Sorts the given string range denoted by [first, last) using the insertion
- * sort algorithm. */
-static void insertion_sort(
-        struct stringv *s,
-        lexicographical_compare comp,
-        string_pos first,
-        string_pos last);
-
-/* Partition operation used in quicksort. */
-static block_pos partition(
-        struct stringv *s,
-        lexicographical_compare comp,
-        string_pos first,
-        string_pos last);
-
-/* Sorts the given string range denoted by [first, last) using the quicksort
- * algorithm. */
-static void quicksort(
-        struct stringv *s,
-        lexicographical_compare comp,
-        string_pos first,
-        string_pos last);
-
 struct stringv *stringv_init(
         struct stringv *stringv,
         char *buf,
@@ -181,9 +144,6 @@ struct stringv *stringv_init(
             || block_size > buf_size) {
         return NULL;
     }
-
-    /* TODO */
-    (void)insertion_sort;
 
     stringv->buf = buf;
     stringv->block_total = buf_size / block_size;
@@ -227,7 +187,7 @@ int stringv_copy(struct stringv *dest, struct stringv const *source)
     /* The destination needs to be cleared. */
     stringv_clear(dest);
 
-    /* If the source stringv is empty, than we don't need to do anything. */
+    /* If the source stringv is empty, then we don't need to do anything. */
     if (source->string_count == 0) {
         return 0;
     }
@@ -456,28 +416,6 @@ char const *stringv_next(struct stringv const *stringv, char const *iter)
     } while (*(iter - 1) != '\0');
 
     return iter;
-}
-
-struct stringv *stringv_sort(
-        struct stringv *stringv,
-        lexicographical_compare comp)
-{
-    if (!stringv || !comp) {
-        return NULL;
-    }
-
-    assert(valid_stringv(stringv));
-
-    /* If there are zero or one strings we don't need to sort anything. */
-    if (stringv->string_count <= 1) {
-        return stringv;
-    }
-
-    /* TODO After profiling, determine an appropriate upper bound for which to
-     *      choose quicksort instead of insertion sort */
-    quicksort(stringv, comp, 0, stringv->string_count);
-
-    return stringv;
 }
 
 #ifndef NDEBUG
@@ -749,160 +687,4 @@ block_ptr block_write(
     ++s->string_count;
 
     return write_ptr;
-}
-
-void swap_block(struct stringv *s, block_pos bn1, block_pos bn2)
-{
-    block_ptr bp1 = NULL;
-    block_ptr bp2 = NULL;
-    int i = 0;
-    char temp = 0;
-
-    assert(s && valid_stringv(s));
-    assert(valid_block_pos(s, bn1));
-    assert(valid_block_pos(s, bn2));
-    assert(bn1 != bn2);
-
-    bp1 = block_pos_to_block_ptr(s, bn1);
-    bp2 = block_pos_to_block_ptr(s, bn2);
-
-    /* TODO maybe optimise with int-sized copies? */
-    for (i = 0; i < s->block_size; ++i) {
-        temp = *(bp1 + i);
-        *(bp1 + i) = *(bp2 + i);
-        *(bp2 + i) = temp;
-    }
-}
-
-void reverse_block_range(struct stringv *s, block_pos first, block_pos last)
-{
-    int i = 0;
-
-    assert(s && valid_stringv(s));
-    assert(valid_block_range(s, first, last));
-
-    for (i = 0; i < (last - first) / 2; ++i) {
-        swap_block(s, first + i, last - 1 - i);
-    }
-}
-
-void swap_string(struct stringv *s, string_pos sn1, string_pos sn2)
-{
-    block_pos first1 = 0, last1 = 0, first2 = 0, last2 = 0;
-
-    assert(s && valid_stringv(s));
-    assert(valid_string_pos(s, sn1, 0));
-    assert(valid_string_pos(s, sn2, 0));
-
-    if (sn1 == sn2) {
-        return;
-    } else if (is_one_to_one(s)) {
-        swap_block(s, sn1, sn2);
-        return;
-    }
-
-    /* Reversing the first and second block ranges individually, and then
-     * reversing the entire stringv (blockwise) results in a stringv where
-     * the strings are swapped. */
-
-    first1 = string_pos_to_block_pos(s, sn1);
-    first2 = string_pos_to_block_pos(s, sn2);
-    last1 = first1 + blocks_required(s, sn1);
-    last2 = first2 + blocks_required(s, sn2);
-
-    reverse_block_range(s, first1, last1);
-    reverse_block_range(s, first2, last2);
-    reverse_block_range(
-            s,
-            (first1 < first2) ? first1 : first2,
-            (first1 < first2) ? last2 : last1);
-}
-
-void insertion_sort(
-        struct stringv *s,
-        lexicographical_compare comp,
-        string_pos first,
-        string_pos last)
-{
-    char const *s1 = NULL, *s2 = NULL;
-    size_t l1 = 0, l2 = 0;
-    string_pos i = 0, j = 0, result = 0;
-
-    assert(s && valid_stringv(s));
-    assert(comp);
-    assert(first < last);
-
-    for (i = first + 1; i < last; ++i) {
-        j = i;
-
-        /* Get the strings and compute their length. */
-        s1 = stringv_get(s, j - 1);
-        s2 = stringv_get(s, j);
-        l1 = strlen(s1);
-        l2 = strlen(s2);
-        result = comp(s1, s2, (l1 < l2) ? l1 : l2);
-
-        while (j > 0 && result > 0) {
-            swap_string(s, j, j - 1);
-            --j;
-        }
-    }
-}
-
-block_pos partition(
-        struct stringv *s,
-        lexicographical_compare comp,
-        string_pos first,
-        string_pos last)
-{
-    string_pos i = 0, j = 0;
-    char const *pivot_string = NULL, *string = NULL;
-    size_t size_pivot = 0, size = 0;
-    int comp_result = 0;
-
-    assert(s && valid_stringv(s));
-    assert(comp);
-    assert(first < last);
-
-    pivot_string = stringv_get(s, last - 1);
-    size_pivot = strlen(pivot_string);
-    i = first;
-
-    for (j = first; j < last - 1; ++j) {
-        /* Get the string and compute its size. */
-        string = stringv_get(s, j);
-        size = strlen(string);
-
-        /* Compare the string to the pivot. */
-        comp_result = comp(
-                string,
-                pivot_string,
-                (size_pivot < size) ? size_pivot : size);
-
-        if (comp_result <= 0) {
-            swap_string(s, i, j);
-            ++i;
-        }
-    }
-
-    swap_string(s, i, last - 1);
-    return i;
-}
-
-void quicksort(
-        struct stringv *s,
-        lexicographical_compare comp,
-        string_pos first,
-        string_pos last)
-{
-    string_pos p = 0;
-
-    assert(s && valid_stringv(s));
-    assert(valid_block_range(s, first, last));
-
-    if (first < last) {
-        p = partition(s, comp, first, last);
-        quicksort(s, comp, first, p - 1);
-        quicksort(s, comp, p + 1, last);
-    }
 }

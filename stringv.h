@@ -23,6 +23,16 @@ struct stringv {
     int string_count;
 };
 
+/* Convenience macro for the zero-initialization of a stringv object. The
+ * expression this macro expands to is a rvalue that should only appear
+ * on the right side of an assignment expression where the left side if of
+ * type struct stringv. */
+#if defined(__STDC__) && defined(__STD_VERSION__) && __STD_VERSION__ >= 199901
+#   define STRINGV_ZERO (struct stringv){NULL,0,0,0,0}
+#else
+#   define STRINGV_ZERO {NULL,0,0,0,0}
+#endif /* defined(__STDC__) && ... */
+
 /* The string_pos is an integral quantity that determines (uniquely) a
  * specific string inside a stringv. */
 typedef int string_pos;
@@ -299,33 +309,6 @@ char const *stringv_end(struct stringv const *stringv);
 char const *stringv_next(
         struct stringv const *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT iter);
-
-/* Sorts the given stringv against the supplied comparison function. This
- * function does not allocate extra memory and hence all string moves are
- * done in place, which may be expensive. The sorting algorithm used varies
- * between quicksort and insertion sort depending on the capacity of
- * the stringv according to what is deemed to be more efficient. Avoid calling
- * this function on an already sorted stringv as it may incur quadratic
- * time complexity.
- *
- *      stringv     The stringv to sort.
- *      comp        A lexicographical comparator used in sorting. This function
- *                  must have the same semantics as strnlen.
- *
- *      PRE:        stringv is a valid stringv
- *                  comp semantically equivalent to strnlen
- *      POST:       stringv_get(s, 0) < ... < stringv_get(s, N) under comp
- *                  Iterators invalidated if stringv->string_count > 1
- *
- *      TODO        - Use insertion sort for smaller capacity (profile)
- *                  - Investigate vectorisation of loop in swap_block
- *                  - Clean up implementation of partition
- *                  - quicksort is currently implemented recursively, rewrite
- *                      it iteratively
- */
-struct stringv *stringv_sort(
-        struct stringv *stringv,
-        lexicographical_compare comp);
 
 #if defined(__cplusplus)
 }
