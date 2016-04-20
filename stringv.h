@@ -23,16 +23,6 @@ struct stringv {
     int string_count;
 };
 
-/* Convenience macro for the zero-initialization of a stringv object. The
- * expression this macro expands to is a rvalue that should only appear
- * on the right side of an assignment expression where the left side if of
- * type struct stringv. */
-#if defined(__STDC__) && defined(__STD_VERSION__) && __STD_VERSION__ >= 199901
-#   define STRINGV_ZERO (struct stringv){NULL,0,0,0,0}
-#else
-#   define STRINGV_ZERO {NULL,0,0,0,0}
-#endif /* defined(__STDC__) && ... */
-
 /* The string_pos is an integral quantity that determines (uniquely) a
  * specific string inside a stringv. */
 typedef int string_pos;
