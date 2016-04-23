@@ -307,7 +307,7 @@ int stringv_split_c(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
         int length,
-        char separator)
+        int separator)
 {
     int i = 0, start = 0;
 

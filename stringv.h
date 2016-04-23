@@ -234,7 +234,7 @@ int stringv_split_c(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
         int length,
-        char separator);
+        int separator);
 
 /* Removes the string specified by the index argument from the stringv.
  * Returns 1 on success or 0 on failure, occuring when the arguments are
