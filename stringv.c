@@ -303,7 +303,7 @@ char const *stringv_insert(
             write_pos + blocks_req);
 }
 
-int stringv_split(
+int stringv_split_c(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
         int length,

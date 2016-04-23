@@ -230,7 +230,7 @@ char const *stringv_insert(
  *                  length > 0
  *      POST:       stringv data not overwritten or deleted
  */
-int stringv_split(
+int stringv_split_c(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
         int length,
