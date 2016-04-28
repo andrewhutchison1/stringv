@@ -342,6 +342,42 @@ int stringv_split_s(
         char const *separator,
         int separator_length)
 {
+    char const *first = NULL, *last = NULL;
+    char const *const end = string + length;
+
+    if (!stringv
+            || !string
+            || length <= 0
+            || !separator
+            || separator_length <= 0) {
+        return 0;
+    }
+
+    if (length == 1) {
+        return stringv_split_c(stringv, string, length, *separator);
+    }
+
+    first = string;
+    while (first != end + 1) {
+        last = strstr(first, separator);
+        if (!last) {
+            last = end;
+        }
+
+        if (last > first) {
+            if (!stringv_push_back(stringv, first, (int)(last - first))) {
+                return (int)(first - string);
+            }
+        }
+
+        if (last == end) {
+            first = end + 1;
+        } else {
+            first = last + separator_length;
+        }
+    }
+
+    return length;
 }
 
 int stringv_remove(struct stringv *stringv, string_pos sn)
