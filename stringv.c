@@ -74,7 +74,7 @@ static block_pos clear_block_range(
 /* Determines how many blocks would be required to store the given length
  * of data (in chars; NOT including the NUL terminator) in the given
  * stringv. */
-static int blocks_required(struct stringv const *s, int length);
+static int blocks_required(struct stringv const *s, size_t length);
 
 /* Determines if a given block is terminal. A block is terminal if it is
  * terminated with one or more NUL characters. Terminal blocks end multi-
@@ -127,7 +127,7 @@ static block_pos shift_blocks(
 static block_ptr block_write(
         struct stringv *STRINGV_RESTRICT s,
         char const *STRINGV_RESTRICT string,
-        int length,
+        size_t length,
         block_pos first,
         block_pos last);
 
@@ -217,11 +217,11 @@ int stringv_copy(struct stringv *dest, struct stringv const *source)
 char const *stringv_push_back(
         struct stringv *stringv,
         char const *string,
-        int length)
+        size_t length)
 {
     int blocks_req = 0;
 
-    if (!stringv || !string || length <= 0) {
+    if (!stringv || !string || length == 0) {
         return NULL;
     }
 
@@ -249,7 +249,7 @@ char const *stringv_push_back(
 char const *stringv_push_front(
         struct stringv *stringv,
         char const *string,
-        int length)
+        size_t length)
 {
     return stringv_insert(stringv, string, length, 0);
 }
@@ -257,7 +257,7 @@ char const *stringv_push_front(
 char const *stringv_insert(
         struct stringv *stringv,
         char const *string,
-        int length,
+        size_t length,
         string_pos sn)
 {
     int blocks_req = 0;
@@ -303,10 +303,10 @@ char const *stringv_insert(
             write_pos + blocks_req);
 }
 
-int stringv_split_c(
+size_t stringv_split_c(
         struct stringv *stringv,
         char const *string,
-        int length,
+        size_t length,
         int separator)
 {
     char const *first = NULL, *last = NULL;
@@ -324,8 +324,8 @@ int stringv_split_c(
         }
 
         if (last > first) {
-            if (!stringv_push_back(stringv, first, (int)(last - first))) {
-                return (int)(first - string);
+            if (!stringv_push_back(stringv, first, (size_t)(last - first))) {
+                return (size_t)(first - string);
             }
         }
 
@@ -335,12 +335,12 @@ int stringv_split_c(
     return length;
 }
 
-int stringv_split_s(
+size_t stringv_split_s(
         struct stringv *stringv,
         char const *string,
-        int length,
+        size_t length,
         char const *separator,
-        int separator_length)
+        size_t separator_length)
 {
     char const *first = NULL, *last = NULL;
     char const *const end = string + length;
@@ -365,8 +365,8 @@ int stringv_split_s(
         }
 
         if (last > first) {
-            if (!stringv_push_back(stringv, first, (int)(last - first))) {
-                return (int)(first - string);
+            if (!stringv_push_back(stringv, first, (size_t)(last - first))) {
+                return (size_t)(first - string);
             }
         }
 
@@ -557,17 +557,18 @@ block_pos clear_block_range(struct stringv *s, block_pos first, block_pos last)
     return first;
 }
 
-int blocks_required(struct stringv const *s, int length)
+int blocks_required(struct stringv const *s, size_t length)
 {
     assert(s && valid_stringv(s));
-    assert(length > 0);
+    assert(length != 0);
 
     /* Increment the length to accomodate the NUL character. All strings
      * in a stringv are NUL terminated (with at least one NUL terminator, 
      * by design. */
     ++length;
 
-    return (length / s->block_size) + (length % s->block_size != 0);
+    return (int)((length / (size_t)s->block_size) +
+        (length % (size_t)s->block_size != 0));
 }
 
 int is_block_terminal(struct stringv const *s, block_pos bn)
@@ -646,9 +647,10 @@ int copy_blockwise_injective(
 
 int copy_stringwise(struct stringv *dest, struct stringv const *source)
 {
-    string_pos i = 0;
-    int ith_length = 0, blocks_req = 0;
     char const *ith_string = NULL;
+    size_t ith_length = 0;
+    string_pos i = 0;
+    int blocks_req = 0;
 
     assert(dest && valid_stringv(dest));
     assert(source && valid_stringv(source));
@@ -659,7 +661,7 @@ int copy_stringwise(struct stringv *dest, struct stringv const *source)
          * determine how many blocks it uses, and bail out if the required
          * number of blocks is greater than the available blocks in dest. */
         ith_string = string_pos_to_block_ptr(source, i);
-        ith_length = (int)strlen(ith_string);
+        ith_length = strlen(ith_string);
         blocks_req = blocks_required(dest, ith_length);
 
         /* If there is insufficient room, stop copying */
@@ -712,7 +714,7 @@ block_pos shift_blocks(
 block_ptr block_write(
         struct stringv *s,
         char const *string,
-        int length,
+        size_t length,
         block_pos first,
         block_pos last)
 {

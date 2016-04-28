@@ -152,7 +152,7 @@ int stringv_copy(
 char const *stringv_push_back(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
-        int length);
+        size_t length);
 
 /* Prepends a string to the stringv, returning a pointer to its location, or
  * NULL on error. If the function succeeds, the index of the prepended string
@@ -181,7 +181,7 @@ char const *stringv_push_back(
 char const *stringv_push_front(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
-        int length);
+        size_t length);
 
 /* Inserts a string at the specified string index, returning a pointer to it,
  * or NULL on error. If the function succeeds, the string will be written into
@@ -208,7 +208,7 @@ char const *stringv_push_front(
 char const *stringv_insert(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
-        int length,
+        size_t length,
         int index);
 
 /* Inserts into a stringv each substring of the given string, up to length,
@@ -230,10 +230,10 @@ char const *stringv_insert(
  *                  length > 0
  *      POST:       stringv data not overwritten or deleted
  */
-int stringv_split_c(
+size_t stringv_split_c(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
-        int length,
+        size_t length,
         int separator);
 
 /* Inserts into a stringv each substring of the given string, up to length
@@ -258,12 +258,12 @@ int stringv_split_c(
  *                          separator_length > 0
  *      POST:               stringv data not overwritten or deleted
  */
-int stringv_split_s(
+size_t stringv_split_s(
         struct stringv *STRINGV_RESTRICT stringv,
         char const *STRINGV_RESTRICT string,
-        int length,
+        size_t length,
         char const *STRINGV_RESTRICT separator,
-        int separator_length);
+        size_t separator_length);
 
 /* Removes the string specified by the index argument from the stringv.
  * Returns 1 on success or 0 on failure, occuring when the arguments are
