@@ -312,7 +312,7 @@ int stringv_split_c(
     char const *first = NULL, *last = NULL;
     char const *const end = string + length;
 
-    if (!stringv || !string || length == 0) {
+    if (!stringv || !string || length <= 0) {
         return 0;
     }
 
