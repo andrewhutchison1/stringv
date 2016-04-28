@@ -304,39 +304,44 @@ char const *stringv_insert(
 }
 
 int stringv_split_c(
-        struct stringv *STRINGV_RESTRICT stringv,
-        char const *STRINGV_RESTRICT string,
+        struct stringv *stringv,
+        char const *string,
         int length,
         int separator)
 {
-    int i = 0, start = 0;
+    char const *first = NULL, *last = NULL;
+    char const *const end = string + length;
 
-    if (!stringv || !string || length <= 0) {
+    if (!stringv || !string || length == 0) {
         return 0;
     }
 
-    for (i = 0; i < length; ++i) {
-        /* Upon encountering a separator character, attempt to push back the
-         * string. If it fails, return the start index of the string (and not
-         * i) since the partial string from start to i was not pushed back
-         * into the stringv. */
-        if (string[i] == separator) {
-            if (!stringv_push_back(stringv, string + start, i - start)) {
-                return start;
-            } else {
-                /* The push back succeeded, so we can continue after we set
-                 * the start index to i + 1 which denotes the character
-                 * immediately after the separator char we just found. */
-                start = i + 1;
+    first = string;
+    while (first != end + 1) {
+        last = strchr(first, separator);
+        if (!last) {
+            last = end;
+        }
+
+        if (last > first) {
+            if (!stringv_push_back(stringv, first, (int)(last - first))) {
+                return (int)(first - string);
             }
         }
+
+        first = last + 1;
     }
 
-    if (!stringv_push_back(stringv, string + start, length - start)) {
-        return start;
-    } else {
-        return length;
-    }
+    return length;
+}
+
+int stringv_split_s(
+        struct stringv *stringv,
+        char const *string,
+        int length,
+        char const *separator,
+        int separator_length)
+{
 }
 
 int stringv_remove(struct stringv *stringv, string_pos sn)

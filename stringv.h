@@ -236,6 +236,35 @@ int stringv_split_c(
         int length,
         int separator);
 
+/* Inserts into a stringv each substring of the given string, up to length
+ * characters, where each substring is separated by the given separator
+ * string. As in stringv_split_c, each substring is inserted as if a call to
+ * stringv_push_back was made.
+ *
+ *      stringv             The stringv to write to.
+ *      string              The string to split.
+ *      length              The length of the string to split, in chars.
+ *      separator           The separating (delimiting) string.
+ *      separator_length    The length of the separator string, in chars.
+ *      RETURNS             The index of the first non-delimiter character
+ *                          in the argument string that was not read into the
+ *                          stringv if there was insufficient space, or length
+ *                          otherwise.
+ *
+ *      PRE:                stringv != NULL
+ *                          string != NULL
+ *                          length > 0
+ *                          separator != NULL
+ *                          separator_length > 0
+ *      POST:               stringv data not overwritten or deleted
+ */
+int stringv_split_s(
+        struct stringv *STRINGV_RESTRICT stringv,
+        char const *STRINGV_RESTRICT string,
+        int length,
+        char const *STRINGV_RESTRICT separator,
+        int separator_length);
+
 /* Removes the string specified by the index argument from the stringv.
  * Returns 1 on success or 0 on failure, occuring when the arguments are
  * invalid or the index is out of range
